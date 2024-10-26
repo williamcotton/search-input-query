@@ -3,7 +3,7 @@
 open FParsec
 
 // Define the types
-type SearchCriteria =
+type SearchQuery =
     { SearchTerms: string list
       Fields: Map<string, string> }
 
@@ -35,7 +35,7 @@ let token =
     attempt fieldValue <|> searchTerm
 
 // Main parser
-let searchParser : Parser<SearchCriteria, unit> =
+let searchParser : Parser<SearchQuery, unit> =
     many (token .>> spaces) |>> fun tokens ->
         let fields, searchTerms =
             tokens |> List.fold (fun (fields, terms) token ->

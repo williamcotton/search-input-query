@@ -18,7 +18,6 @@ let quotedString =
 let unquotedString = 
     many1Chars (noneOf " :")
 
-// Parser for the search term (either quoted or unquoted)
 // Parser for field:value pairs
 let fieldValue =
     pipe2
@@ -49,7 +48,6 @@ let searchParser : Parser<SearchCriteria, unit> =
             Fields = fields
         }
 
-// Function to run the parser
 // Function to run the parser
 let parseSearchQuery (input: string) =
     run (spaces >>. searchParser .>> eof) input

@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 from ply import lex, yacc
-from typing import Dict, Optional, NamedTuple
+from typing import Dict, List, Optional, NamedTuple
 
 class SearchQuery(NamedTuple):
-    search_term: Optional[str]
+    search_terms: List[str]
     fields: Dict[str, str]
 
 # Lexer
@@ -39,11 +39,11 @@ def p_query(p):
          | fields
     '''
     if len(p) == 3:
-        p[0] = SearchQuery(search_term=p[1], fields=p[2])
+        p[0] = SearchQuery(search_terms=p[1], fields=p[2])
     elif len(p) == 2 and isinstance(p[1], dict):
-        p[0] = SearchQuery(search_term=None, fields=p[1])
+        p[0] = SearchQuery(search_terms=[], fields=p[1])
     else:
-        p[0] = SearchQuery(search_term=p[1], fields={})
+        p[0] = SearchQuery(search_terms=p[1], fields={})
 
 def p_terms(p):
     '''
@@ -58,9 +58,9 @@ def p_unquoted_terms(p):
                   | unquoted_terms WHITESPACE WORD
     '''
     if len(p) == 2:
-        p[0] = p[1]
+        p[0] = [p[1]]
     else:
-        p[0] = p[1] + ' ' + p[3]
+        p[0] = p[1] + [p[3]]
 
 def p_fields(p):
     '''
@@ -127,7 +127,7 @@ def split_query(query: str):
         else:
             search_terms.append(token)
     
-    return ' '.join(search_terms), ' '.join(field_terms)
+    return search_terms, ' '.join(field_terms)
 
 def parse_search_query(query: str) -> SearchQuery:
     """
@@ -137,23 +137,28 @@ def parse_search_query(query: str) -> SearchQuery:
         query: The search query string to parse
         
     Returns:
-        SearchQuery object containing the search term and fields
+        SearchQuery object containing search terms and fields
         
     Raises:
         Exception: If parsing fails
     """
-    search_part, fields_part = split_query(query)
+    search_parts, fields_part = split_query(query)
     
     # Initialize results
-    search_term = None
+    search_terms = []
     fields = {}
     
-    # Parse search term
-    if search_part:
-        if search_part.startswith('"') and search_part.endswith('"'):
-            search_term = search_part[1:-1]
+    # Parse search terms
+    for part in search_parts:
+        if part.startswith('"') and part.endswith('"'):
+            # Quoted term - treat as single term
+            term = part[1:-1].strip()
+            if term:
+                search_terms.append(term)
         else:
-            search_term = search_part.strip()
+            # Unquoted term - split into words
+            words = part.strip().split()
+            search_terms.extend(words)
     
     # Parse fields
     if fields_part:
@@ -165,21 +170,23 @@ def parse_search_query(query: str) -> SearchQuery:
                 fields[key.lower()] = value
             i += 1
     
-    return SearchQuery(search_term=search_term, fields=fields)
+    return SearchQuery(search_terms=search_terms, fields=fields)
 
 def main():
     # Example usage with both quoted and unquoted terms
     test_queries = [
         '"red shoes" category:clothing size:10 color:red brand:nike',
         'red shoes category:clothing size:10 color:red brand:nike',
-        'comfortable red shoes category:clothing size:10'
+        'comfortable red shoes category:clothing size:10',
+        'category:clothing "red winter shoes" warm cozy',
+        '"quoted term" another term yet:another'
     ]
     
     for query in test_queries:
         print(f"\nParsing query: {query}")
         try:
             result = parse_search_query(query)
-            print(f"Search term: {result.search_term}")
+            print(f"Search terms: {result.search_terms}")
             print("Fields:")
             for key, value in result.fields.items():
                 print(f"  {key}: {value}")

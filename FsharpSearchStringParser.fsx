@@ -3,10 +3,9 @@
 open FParsec
 
 // Define the types
-type SearchCriteria = {
-    SearchTerm: string option
-    Fields: Map<string, string>
-}
+type SearchCriteria =
+    { SearchTerms: string list
+      Fields: Map<string, string> }
 
 // Parser for quoted string - handles escaped quotes
 let quotedString = 
@@ -20,37 +19,55 @@ let unquotedString =
     many1Chars (noneOf " :")
 
 // Parser for the search term (either quoted or unquoted)
-let searchTerm = 
-    (quotedString <|> unquotedString) .>> spaces
-
 // Parser for field:value pairs
-let fieldValue = 
+let fieldValue =
     pipe2
         (many1Chars letter .>> pchar ':')
-        (many1Chars (noneOf " "))
-        (fun field value -> (field.ToLower(), value))
+        (quotedString <|> unquotedString)
+        (fun field value -> Choice1Of2 (field.ToLower(), value))
+
+// Parser for search terms
+let searchTerm =
+    (quotedString <|> unquotedString)
+    |>> Choice2Of2
+
+// Parser for tokens (either field:value or search term)
+let token =
+    attempt fieldValue <|> searchTerm
 
 // Main parser
 let searchParser : Parser<SearchCriteria, unit> =
-    pipe2
-        (opt searchTerm)
-        (many (fieldValue .>> spaces))
-        (fun searchTerm fields ->
-            {
-                SearchTerm = searchTerm
-                Fields = Map.ofList fields
-            })
+    many (token .>> spaces) |>> fun tokens ->
+        let fields, searchTerms =
+            tokens |> List.fold (fun (fields, terms) token ->
+                match token with
+                | Choice1Of2 (field, value) -> (Map.add field value fields, terms)
+                | Choice2Of2 term -> (fields, term :: terms)
+            ) (Map.empty, [])
+        {
+            SearchTerms = List.rev searchTerms
+            Fields = fields
+        }
 
+// Function to run the parser
 // Function to run the parser
 let parseSearchQuery (input: string) =
     run (spaces >>. searchParser .>> eof) input
 
-// Test it
-let r = parseSearchQuery "\"red shoes\" category:clothing size:10 color:red brand:nike"
-match r with
-| Success (result, _, _) -> 
-    printfn "Search term: %A" result.SearchTerm
-    printfn "Fields:"
-    result.Fields |> Map.iter (fun k v -> printfn "  %s: %s" k v)
-| Failure (msg, _, _) -> 
-    printfn "Error: %s" msg
+// Test function
+let testParser input =
+    printfn "Parsing query: %s" input
+    match parseSearchQuery input with
+    | Success (result, _, _) ->
+        printfn "Search terms: %A" result.SearchTerms
+        printfn "Fields:"
+        result.Fields |> Map.iter (fun k v -> printfn "  %s: %s" k v)
+    | Failure (msg, _, _) ->
+        printfn "Error: %s" msg
+    printfn ""
+
+testParser "\"red shoes\" category:clothing size:10 color:red brand:nike"
+testParser "red shoes category:clothing size:10 color:red brand:nike"
+testParser "comfortable red shoes category:clothing size:10"
+testParser "category:clothing \"red winter shoes\" warm cozy"
+testParser "\"quoted term\" another term yet:another"

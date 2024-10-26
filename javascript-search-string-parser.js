@@ -8,8 +8,36 @@ class Parser {
 
   // Main function to start parsing
   parse() {
-    const searchTerms = this.parseSearchTerms();
-    const fields = this.parseFields();
+    const searchTerms = [];
+    const fields = {};
+    this.skipWhitespace();
+
+    while (!this.atEnd()) {
+      const savedPosition = this.position;
+
+      // Try to parse a field:value pair
+      try {
+        const key = this.parseWord().toLowerCase();
+        this.expect(":");
+        const value = this.parseValue();
+        fields[key] = value;
+        this.skipWhitespace();
+        continue;
+      } catch (e) {
+        this.position = savedPosition; // Reset position
+      }
+
+      // Try to parse a search term
+      try {
+        const term = this.parseTerm();
+        searchTerms.push(term);
+        this.skipWhitespace();
+      } catch (e) {
+        // If we can't parse a term, we can't proceed further
+        break;
+      }
+    }
+
     return { searchTerms, fields };
   }
 
@@ -25,59 +53,55 @@ class Parser {
     }
   }
 
-  // Parse multiple search terms (both quoted and unquoted)
-  parseSearchTerms() {
-    const terms = [];
+  // Parse a search term (quoted or unquoted)
+  parseTerm() {
     this.skipWhitespace();
 
-    while (!this.atEnd()) {
-      // Try to parse quoted term
-      if (this.input[this.position] === '"') {
-        try {
-          terms.push(this.parseQuotedTerm());
-          this.skipWhitespace();
-          continue;
-        } catch (e) {
-          // If quoted parsing fails, try unquoted
-        }
-      }
-
-      // Try to parse unquoted term
-      try {
-        // Peek ahead to see if this is actually a field
-        const savedPosition = this.position;
-        const word = this.parseWord();
-        this.skipWhitespace();
-
-        if (!this.atEnd() && this.input[this.position] === ":") {
-          // This is a field, rewind and break
-          this.position = savedPosition;
-          break;
-        }
-
-        terms.push(word);
-      } catch (e) {
-        break;
-      }
+    if (this.atEnd()) {
+      throw new Error("Unexpected end of input");
     }
 
-    return terms;
+    if (this.input[this.position] === '"') {
+      return this.parseQuotedTerm();
+    } else {
+      return this.parseWord();
+    }
   }
 
-  // Parse a quoted search term
+  // Parse a value (quoted or unquoted)
+  parseValue() {
+    this.skipWhitespace();
+
+    if (this.atEnd()) {
+      throw new Error("Unexpected end of input");
+    }
+
+    if (this.input[this.position] === '"') {
+      return this.parseQuotedTerm();
+    } else {
+      return this.parseWord();
+    }
+  }
+
+  // Parse a quoted term
   parseQuotedTerm() {
     if (this.atEnd() || this.input[this.position] !== '"') {
       throw new Error("Expected opening quote for search term");
     }
     this.position++; // Skip opening quote
 
-    let start = this.position;
-    while (!this.atEnd() && this.input[this.position] !== '"') {
+    let term = "";
+    while (!this.atEnd()) {
       if (this.input[this.position] === "\\") {
         this.position++;
         if (this.atEnd()) {
           throw new Error("Unexpected end of input after escape character");
         }
+        term += this.input[this.position];
+      } else if (this.input[this.position] === '"') {
+        break;
+      } else {
+        term += this.input[this.position];
       }
       this.position++;
     }
@@ -86,42 +110,25 @@ class Parser {
       throw new Error("Expected closing quote for search term");
     }
 
-    let term = this.input.slice(start, this.position);
     this.position++; // Skip closing quote
     return term;
   }
 
-  // Parse a single unquoted word
+  // Parse a word (unquoted term)
   parseWord() {
     this.skipWhitespace();
     let start = this.position;
-    while (!this.atEnd() && /[a-zA-Z0-9_-]/.test(this.input[this.position])) {
+    while (
+      !this.atEnd() &&
+      !/\s/.test(this.input[this.position]) &&
+      this.input[this.position] !== ":"
+    ) {
       this.position++;
     }
     if (start === this.position) {
       throw new Error("Expected a word");
     }
     return this.input.slice(start, this.position);
-  }
-
-  // Parse all key-value pairs into fields object
-  parseFields() {
-    const fields = {};
-    this.skipWhitespace();
-
-    while (!this.atEnd()) {
-      try {
-        const key = this.parseWord().toLowerCase();
-        this.expect(":");
-        const value = this.parseWord();
-        fields[key] = value;
-        this.skipWhitespace();
-      } catch (e) {
-        break;
-      }
-    }
-
-    return fields;
   }
 
   // Expect a specific character and move position forward

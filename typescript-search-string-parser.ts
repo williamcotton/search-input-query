@@ -87,8 +87,10 @@ const parseQuotedString: Parser<string> = (
       if (atEnd(current)) {
         throw new Error("Unexpected end of input after escape character");
       }
+      result += currentChar(current);
+    } else {
+      result += currentChar(current);
     }
-    result += currentChar(current);
     current = advance(current);
   }
 
@@ -104,7 +106,7 @@ const parseQuotedString: Parser<string> = (
 
 const parseWord: Parser<string> = (state: ParserState): ParseResult<string> => {
   state = skipWhitespace(state);
-  const result = takeWhile((char) => /[a-zA-Z0-9_-]/.test(char))(state);
+  const result = takeWhile((char) => /[^\s:]/.test(char))(state);
 
   if (result.value.length === 0) {
     throw new Error("Expected a word");
@@ -113,54 +115,34 @@ const parseWord: Parser<string> = (state: ParserState): ParseResult<string> => {
   return result;
 };
 
-const parseSearchTerms = (state: ParserState): ParseResult<string[]> => {
-  const terms: string[] = [];
-  let current = skipWhitespace(state);
+const parseTerm: Parser<string> = (state: ParserState): ParseResult<string> => {
+  state = skipWhitespace(state);
 
-  while (!atEnd(current)) {
-    // Try to parse quoted string first
-    try {
-      if (currentChar(current) === '"') {
-        const result = parseQuotedString(current);
-        terms.push(result.value);
-        current = skipWhitespace(result.state);
-        continue;
-      }
-    } catch (e) {
-      // If quoted string parsing fails, try unquoted word
-    }
-
-    // Try to parse unquoted word
-    try {
-      const result = parseWord(current);
-      // Check if this is actually a field
-      const nextChar = currentChar(result.state);
-      if (nextChar === ":") {
-        break; // Start of fields section
-      }
-      terms.push(result.value);
-      current = skipWhitespace(result.state);
-    } catch (e) {
-      break;
-    }
+  if (atEnd(state)) {
+    throw new Error("Unexpected end of input");
   }
 
-  return {
-    state: current,
-    value: terms,
-  };
+  if (currentChar(state) === '"') {
+    return parseQuotedString(state);
+  } else {
+    return parseWord(state);
+  }
 };
 
 const parseKeyValuePair: Parser<KeyValuePair> = (
   state: ParserState
 ): ParseResult<KeyValuePair> => {
+  state = skipWhitespace(state);
+
   const { state: afterKey, value: key } = parseWord(state);
 
   if (atEnd(afterKey) || currentChar(afterKey) !== ":") {
     throw new Error("Expected colon after key");
   }
 
-  const { state: afterValue, value } = parseWord(advance(afterKey));
+  const afterColon = advance(afterKey); // Skip colon
+
+  const { state: afterValue, value } = parseTerm(afterColon);
 
   return {
     state: afterValue,
@@ -168,22 +150,58 @@ const parseKeyValuePair: Parser<KeyValuePair> = (
   };
 };
 
+const parseToken = (state: ParserState): ParseResult<KeyValuePair | string> => {
+  let savedState = state;
+
+  // Try to parse as a key-value pair
+  try {
+    const result = parseKeyValuePair(state);
+    return {
+      state: result.state,
+      value: result.value,
+    };
+  } catch (e) {
+    // Reset state if parsing as key-value pair fails
+    state = savedState;
+  }
+
+  // Try to parse as a search term
+  try {
+    const result = parseTerm(state);
+    return {
+      state: result.state,
+      value: result.value,
+    };
+  } catch (e) {
+    throw new Error("Failed to parse token");
+  }
+};
+
 // Main parser
 const parseSearchQuery = (input: string): SearchQuery => {
   try {
     let state = makeState(input);
-    const { state: afterTerms, value: searchTerms } = parseSearchTerms(state);
-
-    // Parse fields
+    const searchTerms: string[] = [];
     const fields: { [key: string]: string } = {};
-    let current = afterTerms;
 
-    while (!atEnd(current)) {
+    state = skipWhitespace(state);
+
+    while (!atEnd(state)) {
+      // Try to parse a token (either field-value pair or search term)
       try {
-        const result = parseKeyValuePair(current);
-        fields[result.value.key] = result.value.value;
-        current = skipWhitespace(result.state);
+        const result = parseToken(state);
+
+        if (typeof result.value === "object" && "key" in result.value) {
+          // It's a KeyValuePair
+          fields[result.value.key] = result.value.value;
+        } else {
+          // It's a search term
+          searchTerms.push(result.value as string);
+        }
+
+        state = skipWhitespace(result.state);
       } catch (e) {
+        // If we can't parse a token, break
         break;
       }
     }

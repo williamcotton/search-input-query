@@ -17,8 +17,8 @@ interface KeyValuePair {
 }
 
 interface SearchQuery {
-  readonly searchTerm: string;
-  readonly keyValuePairs: readonly KeyValuePair[];
+  readonly searchTerms: string[];
+  readonly fields: { [key: string]: string };
 }
 
 type Parser<T> = (state: ParserState) => ParseResult<T>;
@@ -26,7 +26,7 @@ type Parser<T> = (state: ParserState) => ParseResult<T>;
 // Parser state constructor
 const makeState = (input: string, position: number = 0): ParserState => ({
   input,
-  position
+  position,
 });
 
 // Core parsing primitives
@@ -39,7 +39,8 @@ const currentChar = (state: ParserState): string | null =>
 const advance = (state: ParserState): ParserState =>
   makeState(state.input, state.position + 1);
 
-const skipWhile = (predicate: (char: string) => boolean) =>
+const skipWhile =
+  (predicate: (char: string) => boolean) =>
   (state: ParserState): ParserState => {
     let current = state;
     while (!atEnd(current) && predicate(currentChar(current)!)) {
@@ -48,103 +49,122 @@ const skipWhile = (predicate: (char: string) => boolean) =>
     return current;
   };
 
-const skipWhitespace = skipWhile(char => /\s/.test(char));
+const skipWhitespace = skipWhile((char) => /\s/.test(char));
 
 // Parsing combinators
-const expectChar = (char: string, errorMessage?: string): Parser<void> =>
-  (state: ParserState): ParseResult<void> => {
-    const newState = skipWhitespace(state);
-    if (atEnd(newState) || currentChar(newState) !== char) {
-      throw new Error(
-        errorMessage || `Expected '${char}' but found '${
-          atEnd(newState) ? "end of input" : currentChar(newState)
-        }'`
-      );
-    }
-    return {
-      state: advance(newState),
-      value: undefined
-    };
-  };
-
-const takeWhile = (predicate: (char: string) => boolean): Parser<string> =>
+const takeWhile =
+  (predicate: (char: string) => boolean): Parser<string> =>
   (state: ParserState): ParseResult<string> => {
     let result = "";
     let current = state;
-    
+
     while (!atEnd(current) && predicate(currentChar(current)!)) {
       result += currentChar(current);
       current = advance(current);
     }
-    
+
     return {
       state: current,
-      value: result
+      value: result,
     };
   };
 
 // Specific parsers
-const parseQuotedString: Parser<string> = (state: ParserState): ParseResult<string> => {
+const parseQuotedString: Parser<string> = (
+  state: ParserState
+): ParseResult<string> => {
   state = skipWhitespace(state);
-  const afterQuote = expectChar('"', "Expected opening quote for search term")(state).state;
-  
+  if (atEnd(state) || currentChar(state) !== '"') {
+    throw new Error("Expected opening quote");
+  }
+
+  let current = advance(state); // Skip opening quote
   let result = "";
-  let current = afterQuote;
-  
+
   while (!atEnd(current) && currentChar(current) !== '"') {
+    if (currentChar(current) === "\\") {
+      current = advance(current);
+      if (atEnd(current)) {
+        throw new Error("Unexpected end of input after escape character");
+      }
+    }
     result += currentChar(current);
     current = advance(current);
   }
-  
+
   if (atEnd(current)) {
-    throw new Error("Expected closing quote for search term");
+    throw new Error("Expected closing quote");
   }
-  
+
   return {
     state: advance(current), // Skip closing quote
-    value: result
+    value: result,
   };
 };
 
 const parseWord: Parser<string> = (state: ParserState): ParseResult<string> => {
   state = skipWhitespace(state);
-  const result = takeWhile(char => /\w/.test(char))(state);
-  
+  const result = takeWhile((char) => /[a-zA-Z0-9_-]/.test(char))(state);
+
   if (result.value.length === 0) {
     throw new Error("Expected a word");
   }
-  
+
   return result;
 };
 
-const parseKeyValuePair: Parser<KeyValuePair> = (state: ParserState): ParseResult<KeyValuePair> => {
-  const { state: afterKey, value: key } = parseWord(state);
-  const afterColon = expectChar(':', "Expected colon after key")(afterKey).state;
-  const { state: afterValue, value } = parseWord(afterColon);
-  
-  return {
-    state: afterValue,
-    value: { key, value }
-  };
-};
+const parseSearchTerms = (state: ParserState): ParseResult<string[]> => {
+  const terms: string[] = [];
+  let current = skipWhitespace(state);
 
-const parseKeyValuePairs: Parser<KeyValuePair[]> = (state: ParserState): ParseResult<KeyValuePair[]> => {
-  const pairs: KeyValuePair[] = [];
-  let current = state;
-  
   while (!atEnd(current)) {
+    // Try to parse quoted string first
     try {
-      const result = parseKeyValuePair(current);
-      pairs.push(result.value);
+      if (currentChar(current) === '"') {
+        const result = parseQuotedString(current);
+        terms.push(result.value);
+        current = skipWhitespace(result.state);
+        continue;
+      }
+    } catch (e) {
+      // If quoted string parsing fails, try unquoted word
+    }
+
+    // Try to parse unquoted word
+    try {
+      const result = parseWord(current);
+      // Check if this is actually a field
+      const nextChar = currentChar(result.state);
+      if (nextChar === ":") {
+        break; // Start of fields section
+      }
+      terms.push(result.value);
       current = skipWhitespace(result.state);
     } catch (e) {
       break;
     }
   }
-  
+
   return {
     state: current,
-    value: pairs
+    value: terms,
+  };
+};
+
+const parseKeyValuePair: Parser<KeyValuePair> = (
+  state: ParserState
+): ParseResult<KeyValuePair> => {
+  const { state: afterKey, value: key } = parseWord(state);
+
+  if (atEnd(afterKey) || currentChar(afterKey) !== ":") {
+    throw new Error("Expected colon after key");
+  }
+
+  const { state: afterValue, value } = parseWord(advance(afterKey));
+
+  return {
+    state: afterValue,
+    value: { key: key.toLowerCase(), value },
   };
 };
 
@@ -152,40 +172,65 @@ const parseKeyValuePairs: Parser<KeyValuePair[]> = (state: ParserState): ParseRe
 const parseSearchQuery = (input: string): SearchQuery => {
   try {
     let state = makeState(input);
-    const { state: afterSearchTerm, value: searchTerm } = parseQuotedString(state);
-    const { value: keyValuePairs } = parseKeyValuePairs(afterSearchTerm);
-    
+    const { state: afterTerms, value: searchTerms } = parseSearchTerms(state);
+
+    // Parse fields
+    const fields: { [key: string]: string } = {};
+    let current = afterTerms;
+
+    while (!atEnd(current)) {
+      try {
+        const result = parseKeyValuePair(current);
+        fields[result.value.key] = result.value.value;
+        current = skipWhitespace(result.state);
+      } catch (e) {
+        break;
+      }
+    }
+
     return {
-      searchTerm,
-      keyValuePairs
+      searchTerms,
+      fields,
     };
   } catch (error) {
     if (error instanceof Error) {
       throw new Error(`Parse error: ${error.message}`);
     }
-    throw new Error('Unknown parsing error occurred');
+    throw error;
   }
 };
 
-// Example usage
-const input = '"red shoes" category:clothing size:10 color:red brand:nike';
+// Example usage with test queries
+const test_queries = [
+  '"red shoes" category:clothing size:10 color:red brand:nike',
+  "red shoes category:clothing size:10 color:red brand:nike",
+  "comfortable red shoes category:clothing size:10",
+  'category:clothing "red winter shoes" warm cozy',
+  '"quoted term" another term yet:another',
+];
 
-try {
-  const result = parseSearchQuery(input);
-  console.log("Search term:", result.searchTerm);
-  console.log("Key-Value pairs:", result.keyValuePairs);
-} catch (error) {
-  if (error instanceof Error) {
-    console.error("Parsing error:", error.message);
+for (const query of test_queries) {
+  console.log("\nParsing query:", query);
+  try {
+    const result = parseSearchQuery(query);
+    console.log("Search terms:", result.searchTerms);
+    console.log("Fields:");
+    for (const [key, value] of Object.entries(result.fields)) {
+      console.log(`  ${key}: ${value}`);
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error("Error parsing query:", error.message);
+    }
   }
 }
 
 // Export for use as a module
-export { 
+export {
   parseSearchQuery,
   type SearchQuery,
   type KeyValuePair,
   type ParserState,
   type ParseResult,
-  type Parser
+  type Parser,
 };

@@ -7,18 +7,11 @@ class SearchQuery(NamedTuple):
 
 # Lexer
 tokens = (
-    'QUOTED_STRING',
-    'WORD',
+    'TERM',
 )
 
-def t_QUOTED_STRING(t):
-    r'"([^"\\]|\\.)*"'
-    # Remove quotes and handle escaped characters
-    t.value = t.value[1:-1].replace(r'\"', '"').replace(r'\\', '\\')
-    return t
-
-def t_WORD(t):
-    r'[^\s"]+'
+def t_TERM(t):
+    r'[^\s]+'
     return t
 
 t_ignore = ' \t'
@@ -40,20 +33,13 @@ def p_query(p):
 
 def p_terms(p):
     '''
-    terms : term
-          | terms term
+    terms : TERM
+          | terms TERM
     '''
     if len(p) == 2:
         p[0] = [p[1]]
     else:
         p[0] = p[1] + [p[2]]
-
-def p_term(p):
-    '''
-    term : QUOTED_STRING
-         | WORD
-    '''
-    p[0] = p[1]
 
 def p_error(p):
     if p:
@@ -84,10 +70,8 @@ def parse_string(query: str) -> SearchQuery:
 def main():
     # Example usage with both quoted and unquoted terms
     test_queries = [
-        '"red shoes"',
         'red shoes',
-        'comfortable red shoes',
-        '"red winter shoes" warm cozy'
+        'comfortable red shoes'
     ]
 
     for query in test_queries:

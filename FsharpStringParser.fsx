@@ -6,20 +6,9 @@ open FParsec
 type SearchQuery =
     { SearchTerms: string list }
 
-// Parser for quoted string - handles escaped quotes
-let quotedString = 
-    between 
-        (pchar '"') 
-        (pchar '"')
-        (manyChars (noneOf "\"" <|> (pstring "\\\"" >>% '"')))
-
-// Parser for unquoted string (no spaces)
-let unquotedString = 
-    many1Chars (noneOf " ")
-
 // Parser for search terms
 let searchTerm =
-    (quotedString <|> unquotedString)
+    many1Chars (noneOf " ")
 
 // Main parser
 let searchParser : Parser<SearchQuery, unit> =
@@ -42,7 +31,5 @@ let testParser input =
         printfn "Error: %s" msg
     printfn ""
 
-testParser "\"red shoes\""
 testParser "red shoes"
 testParser "comfortable red shoes"
-testParser "\"red winter shoes\" warm cozy"

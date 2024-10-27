@@ -38,31 +38,31 @@ def t_error(t):
 # Parser
 def p_query(p):
     '''
-    query : items
+    query : tokens
     '''
     search_terms = []
     fields = {}
-    for item in p[1]:
-        if isinstance(item, dict):
-            fields.update(item)
+    for token in p[1]:
+        if isinstance(token, dict):
+            fields.update(token)
         else:
-            search_terms.append(item)
+            search_terms.append(token)
     p[0] = SearchQuery(search_terms=search_terms, fields=fields)
 
-def p_items(p):
+def p_tokens(p):
     '''
-    items : item
-          | items item
+    tokens : token
+           | tokens token
     '''
     if len(p) == 2:
         p[0] = [p[1]]
     else:
         p[0] = p[1] + [p[2]]
 
-def p_item(p):
+def p_token(p):
     '''
-    item : term
-         | field
+    token : term
+          | field
     '''
     p[0] = p[1]
 

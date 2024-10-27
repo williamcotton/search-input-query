@@ -4,11 +4,18 @@ from typing import Dict, List, NamedTuple
 
 class SearchQuery(NamedTuple):
     search_terms: List[str]
+    fields: Dict[str, str]
 
 # Lexer
 tokens = (
     'QUOTED_STRING',
     'WORD',
+    'COLON',
+    'OPEN_PARENS',
+    'CLOSE_PARENS',
+    'AND',
+    'OR',
+    'NOT'
 )
 
 def t_QUOTED_STRING(t):
@@ -18,8 +25,20 @@ def t_QUOTED_STRING(t):
     return t
 
 def t_WORD(t):
-    r'[^\s"]+'
+    r'[^\s":]+'
     return t
+
+t_COLON = r':'
+
+t_OPEN_PARENS = r'('
+
+t_CLOSE_PARENS = r')'
+
+t_AND = r'AND'
+
+t_OR = r'OR'
+
+t_NOT = r'NOT'
 
 t_ignore = ' \t'
 
@@ -34,24 +53,53 @@ def t_error(t):
 # Parser
 def p_query(p):
     '''
-    string : terms
+    query : tokens
     '''
-    p[0] = SearchQuery(search_terms=p[1])
+    search_terms = []
+    fields = {}
+    for token in p[1]:
+        if isinstance(token, dict):
+            fields.update(token)
+        else:
+            search_terms.append(token)
+    p[0] = SearchQuery(search_terms=search_terms, fields=fields)
 
-def p_terms(p):
+def p_tokens(p):
     '''
-    terms : term
-          | terms term
+    tokens : token
+           | tokens token
     '''
     if len(p) == 2:
         p[0] = [p[1]]
     else:
         p[0] = p[1] + [p[2]]
 
+def p_token(p):
+    '''
+    token : term
+          | field
+    '''
+    p[0] = p[1]
+
 def p_term(p):
     '''
     term : QUOTED_STRING
          | WORD
+    '''
+    p[0] = p[1]
+
+def p_field(p):
+    '''
+    field : WORD COLON value
+    '''
+    key = p[1].lower()
+    value = p[3]
+    p[0] = {key: value}
+
+def p_value(p):
+    '''
+    value : QUOTED_STRING
+          | WORD
     '''
     p[0] = p[1]
 
@@ -65,7 +113,7 @@ def p_error(p):
 lexer = lex.lex()
 parser = yacc.yacc(debug=False)
 
-def parse_string(query: str) -> SearchQuery:
+def parse_search_query(query: str) -> SearchQuery:
     """
     Parse a search query string into a SearchQuery object.
 
@@ -73,7 +121,7 @@ def parse_string(query: str) -> SearchQuery:
         query: The search query string to parse
 
     Returns:
-        SearchQuery object containing search terms 
+        SearchQuery object containing search terms and fields
 
     Raises:
         Exception: If parsing fails
@@ -84,17 +132,21 @@ def parse_string(query: str) -> SearchQuery:
 def main():
     # Example usage with both quoted and unquoted terms
     test_queries = [
-        '"red shoes"',
-        'red shoes',
-        'comfortable red shoes',
-        '"red winter shoes" warm cozy'
+        '"red shoes" category:clothing size:10 color:red brand:nike',
+        'red shoes category:clothing size:10 color:red brand:nike',
+        'comfortable red shoes category:clothing size:10',
+        'category:clothing "red winter shoes" warm cozy',
+        '"quoted term" another term yet:another'
     ]
 
     for query in test_queries:
         print(f"\nParsing query: {query}")
         try:
-            result = parse_string(query)
+            result = parse_search_query(query)
             print(f"Search terms: {result.search_terms}")
+            print("Fields:")
+            for key, value in result.fields.items():
+                print(f"  {key}: {value}")
         except Exception as e:
             print(f"Error parsing query: {e}")
 

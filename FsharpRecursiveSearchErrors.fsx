@@ -5,7 +5,6 @@ open FParsec
 // AST types
 type Expression =
     | Term of string
-    | Field of string * string
     | And of Expression * Expression
     | Or of Expression * Expression
 
@@ -25,19 +24,23 @@ let quotedString =
         (manyChars (noneOf "\"" <|> (pstring "\\\"" >>% '"')))
 
 // Parse a word (unquoted string - stops at whitespace, quotes, parens, or standalone AND/OR)
-let word = 
-    many1Chars (noneOf " \"():")
+let word =
+    many1Chars (noneOf " \"()") >>= fun s ->
+        if s.Contains(":") then
+            fail "Fields cannot be used inside expressions. Please remove field:value pairs from expressions."
+        else
+            preturn s
 
-// Parse a term (either quoted or unquoted)
-let term = 
-    (quotedString <|> word) |>> Term
+let term =
+    (quotedString |>> Term)
+    <|> (word |>> Term)
 
 // Parse a field:value pair
 let fieldValue =
     pipe2
         (many1Chars letter .>> pchar ':')
         (quotedString <|> word)
-        (fun field value -> Field(field.ToLower(), value))
+        (fun field value -> (field.ToLower(), value))
 
 // Parse logical operators with proper precedence
 let opp = new OperatorPrecedenceParser<Expression, unit, unit>()
@@ -52,10 +55,9 @@ do
     addInfixOperator "AND" 2 Associativity.Left (fun x y -> And(x, y))
     addInfixOperator "OR" 1 Associativity.Left (fun x y -> Or(x, y))
 
-// Parse a primary expression (term, field:value, or parenthesized expression)
+// Parse a primary expression (term or parenthesized expression)
 let primaryExpr =
     (between (pchar '(' .>> spaces) (pchar ')') expr)
-    <|> attempt fieldValue
     <|> term
     .>> spaces
 
@@ -63,30 +65,35 @@ let primaryExpr =
 do exprImpl.Value <- opp.ExpressionParser .>> spaces
 opp.TermParser <- primaryExpr
 
+// Parse either an expression or a field-value at the top level
+let exprOrField =
+    (attempt (fieldValue |>> fun fv -> Choice2Of2 fv))
+    <|> (expr |>> fun e -> Choice1Of2 e)
+    .>> spaces
+
 // Main parser for the full search query
 let searchParser =
-    spaces >>. many expr .>> spaces .>> eof
-    |>> fun exprs ->
+    spaces >>. many exprOrField .>> eof
+    |>> fun items ->
         let fields = 
-            exprs
+            items
             |> List.choose (function
-                | Field(key, value) -> Some(key, value)
+                | Choice2Of2 (key, value) -> Some (key, value)
                 | _ -> None)
             |> Map.ofList
-            
-        let nonFieldExprs =
-            exprs
-            |> List.filter (function
-                | Field _ -> false
-                | _ -> true)
-            
+
+        let expressions =
+            items
+            |> List.choose (function
+                | Choice1Of2 e -> Some e
+                | _ -> None)
+
         let mainExpr =
-            match nonFieldExprs with
+            match expressions with
             | [] -> None
             | [single] -> Some single
-            | multiple -> 
-                Some(multiple |> List.reduce (fun left right -> And(left, right)))
-            
+            | multiple -> Some (multiple |> List.reduce (fun left right -> And(left, right)))
+
         { Expression = mainExpr; Fields = fields }
 
 // Helper function to stringify expressions
@@ -94,7 +101,6 @@ let rec stringify = function
     | Term value -> 
         if value.Contains(" ") then sprintf "\"%s\"" value
         else value
-    | Field(key, value) -> sprintf "%s:%s" key value
     | And(left, right) -> sprintf "(%s AND %s)" (stringify left) (stringify right)
     | Or(left, right) -> sprintf "(%s OR %s)" (stringify left) (stringify right)
 

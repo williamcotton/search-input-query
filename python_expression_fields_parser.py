@@ -188,8 +188,32 @@ def main():
         'color:red AND size:large',
         'category:"winter boots" AND (color:black OR color:brown)',
         'winter boots color:blue',
+        'red boots black',
+        'red (boots black)',
+        'AND:value',
+        'OR:test',
+        'brand:"Nike\\Air"',
+        'brand:"Nike\"Air"',
+        'brand:"Nike\\"Air"',
+        'field: value',
+        'field :value',
+        'field : value',
+        'a AND b OR c',
+        'a OR b AND c',
+        'a OR b OR c AND d',
+        '',
+        '()',
+        'field:',
+        ':value',
+        '(a OR b) c d',
+        'a AND (b OR c) AND d',
+        '((a AND b) OR c) AND d',
+        'status:"pending review"',
+        'category:pending review',
+        'size:large color:red status:available',
+        'category:"winter boots" AND (color:black OR color:brown) AND size:12'
     ]
-    
+        
     for query in test_queries:
         print(f"\nParsing query: {query}")
         try:

@@ -358,13 +358,13 @@ const stringify = (expr: Expression): string => {
 
 // Test cases
 const testQueries = [
-    "\"red shoes\" OR ((blue OR purple) AND sneakers)",
-    "comfortable AND (leather OR suede)",
-    "(winter OR summer) AND boots",
-    "boots summer",
-    "color:red AND size:large",
-    "category:\"winter boots\" AND (color:black OR color:brown)",
-    "winter boots color:blue",
+  '"red shoes" OR ((blue OR purple) AND sneakers)',
+  'comfortable AND (leather OR suede)',
+  '(winter OR summer) AND boots',
+  'boots summer',
+  'color:red AND size:large',
+  'category:"winter boots" AND (color:black OR color:brown)',
+  'winter boots color:blue',
 ];
 
 for (const query of testQueries) {

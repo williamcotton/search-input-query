@@ -16,12 +16,22 @@ type SearchQuery = {
 // Forward declare expression parser for recursive use
 let expr, exprImpl = createParserForwardedToRef()
 
-// Parse a quoted string - handles escaped quotes
-let quotedString =
+// Helper to handle escaped characters in quoted strings
+let escapedChar = 
+    pstring "\\" >>. 
+    (choice [
+        pchar '"' >>% '"'     // \" -> "
+        pchar '\\' >>% '\\'   // \\ -> \
+        anyChar               // \x -> x (treat escape as nothing for any other char)
+    ])
+
+// Parser for quoted string that correctly handles escaping
+let quotedString = 
     between 
         (pchar '"') 
         (pchar '"')
-        (manyChars (noneOf "\"" <|> (pstring "\\\"" >>% '"')))
+        (manyChars (escapedChar <|> noneOf "\"\\"))
+
 
 // Parse a word (unquoted string - stops at whitespace, quotes, parens, or standalone AND/OR)
 let unquotedString =

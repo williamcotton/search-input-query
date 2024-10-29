@@ -314,10 +314,10 @@ const stringify = (expr: Expression): string => {
 
 // Test cases
 const testQueries = [
-    "\"red shoes\" OR ((blue OR purple) AND sneakers)",
-    "comfortable AND (leather OR suede)",
-    "(winter OR summer) AND boots",
-    "boots summer"
+  '"red shoes" OR ((blue OR purple) AND sneakers)',
+  'comfortable AND (leather OR suede)',
+  '(winter OR summer) AND boots',
+  'boots summer'
 ];
 
 for (const query of testQueries) {

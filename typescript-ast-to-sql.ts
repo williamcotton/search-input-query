@@ -186,6 +186,8 @@ const searchStringToSql = (searchString: string): SqlQueryResult => {
   const searchableColumns = ["title", "description", "content", "name"];
   const validQuery = validate(query, validFields);
 
+  console.log("Valid query:", validQuery);
+
   if (!validQuery.isValid) {
     throw new Error(`Invalid query: ${validQuery.errors[0].message}`);
   }
@@ -196,7 +198,7 @@ const testQueries = [
   "comfortable AND (leather OR suede) brand:nike",
   'category:"winter boots" AND (color:black OR color:brown)',
   "red boots color:blue date:2024-01-01",
-  "winter boots user_id:123",
+  "winter boots ((user_id:123 OR admin_id:456) AND status:active)", 
 ];
 
 for (const query of testQueries) {

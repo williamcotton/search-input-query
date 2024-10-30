@@ -1,3 +1,9 @@
+/*
+https://microsoft.github.io/monaco-editor/playground.html?source=v0.52.0#example-interacting-with-the-editor-line-and-inline-decorations
+
+probably better to just use the monaco editor
+*/
+
 import React, { useState, useRef } from "react";
 
 const SearchInput = () => {

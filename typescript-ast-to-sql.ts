@@ -1,6 +1,10 @@
 #!/usr/bin/env ts-node
 
-import { Expression, SearchQuery, parseSearchQuery } from "./typescript-expression-fields-parser";
+import {
+  Expression,
+  SearchQuery,
+  parseSearchQuery,
+} from "./typescript-lexer-parser-functional";
 import { validate } from "./typescript-field-validator";
 
 interface SqlQueryResult {

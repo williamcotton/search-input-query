@@ -1,6 +1,7 @@
 #!/usr/bin/env ts-node
 
 import { Expression, SearchQuery, parseSearchQuery } from "./typescript-expression-fields-parser";
+import { validate } from "./typescript-field-validator";
 
 interface SqlQueryResult {
   text: string;
@@ -181,7 +182,14 @@ const searchQueryToSql = (query: SearchQuery, searchableColumns: string[]): SqlQ
  */
 const searchStringToSql = (searchString: string): SqlQueryResult => {
   const query = parseSearchQuery(searchString);
-  return searchQueryToSql(query, ["title", "description", "content", "name"]);
+  const validFields = ["color", "category", "date"];
+  const searchableColumns = ["title", "description", "content", "name"];
+  const validQuery = validate(query, validFields);
+
+  if (!validQuery.isValid) {
+    throw new Error(`Invalid query: ${validQuery.errors[0].message}`);
+  }
+  return searchQueryToSql(query, searchableColumns);
 };
 
 const testQueries = [

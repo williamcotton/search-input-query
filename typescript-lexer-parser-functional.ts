@@ -391,7 +391,8 @@ const testQueries = [
   'a AND b OR c',
   'category:"winter boots" AND (color:black OR color:brown) AND size:12',
   'red boots color:blue date:2024-01-01',
-  'winter boots ((user_id:123 OR admin_id:456) AND status:active)'
+  'winter boots ((user_id:123 OR admin_id:456) AND status:active)',
+  'winter (boots shoes)'
 ];
 
 for (const query of testQueries) {

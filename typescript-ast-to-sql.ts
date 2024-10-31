@@ -19,7 +19,6 @@ interface SqlState {
 }
 
 // Constants
-// const SEARCHABLE_COLUMNS = ["title", "description", "content", "name"] as const;
 const SPECIAL_CHARS = ["%", "_"] as const;
 const ESCAPE_CHAR = "\\";
 

@@ -16,6 +16,7 @@ interface Token {
   type: TokenType;
   value: string;
   position: number;
+  length: number;
 }
 
 interface TokenStream {
@@ -62,7 +63,7 @@ const createStream = (tokens: Token[]): TokenStream => ({
 const currentToken = (stream: TokenStream): Token =>
   stream.position < stream.tokens.length
     ? stream.tokens[stream.position]
-    : { type: TokenType.EOF, value: "", position: stream.position };
+    : { type: TokenType.EOF, value: "", position: stream.position, length: 0 };
 
 const advanceStream = (stream: TokenStream): TokenStream => ({
   ...stream,
@@ -80,17 +81,28 @@ const tokenizeQuotedString = (
 ): [Token, number] => {
   let value = "";
   let pos = position + 1; // Skip opening quote
+  let length = 2; // Start with 2 for the quotes
 
   while (pos < input.length) {
     const char = input[pos];
     if (isQuoteChar(char)) {
-      return [{ type: TokenType.QUOTED_STRING, value, position }, pos + 1];
+      return [
+        {
+          type: TokenType.QUOTED_STRING,
+          value,
+          position,
+          length: length, // Include both quotes in length
+        },
+        pos + 1,
+      ];
     }
     if (isEscapeChar(char) && pos + 1 < input.length) {
       value += input[pos + 1];
+      length += 2; // Count both escape char and escaped char
       pos += 2;
     } else {
       value += char;
+      length++;
       pos++;
     }
   }
@@ -114,7 +126,15 @@ const tokenizeWord = (input: string, position: number): [Token, number] => {
       ? TokenType.OR
       : TokenType.WORD;
 
-  return [{ type, value, position }, pos];
+  return [
+    {
+      type,
+      value,
+      position,
+      length: value.length,
+    },
+    pos,
+  ];
 };
 
 const tokenize = (input: string): Token[] => {
@@ -129,33 +149,52 @@ const tokenize = (input: string): Token[] => {
       continue;
     }
 
-    let token: Token;
     switch (char) {
-      case '"':
+      case '"': {
         const [quotedToken, newPos] = tokenizeQuotedString(input, position);
         tokens.push(quotedToken);
         position = newPos;
         break;
+      }
 
-      case ":":
-        tokens.push({ type: TokenType.COLON, value: ":", position });
+      case ":": {
+        tokens.push({
+          type: TokenType.COLON,
+          value: ":",
+          position,
+          length: 1,
+        });
         position++;
         break;
+      }
 
-      case "(":
-        tokens.push({ type: TokenType.LPAREN, value: "(", position });
+      case "(": {
+        tokens.push({
+          type: TokenType.LPAREN,
+          value: "(",
+          position,
+          length: 1,
+        });
         position++;
         break;
+      }
 
-      case ")":
-        tokens.push({ type: TokenType.RPAREN, value: ")", position });
+      case ")": {
+        tokens.push({
+          type: TokenType.RPAREN,
+          value: ")",
+          position,
+          length: 1,
+        });
         position++;
         break;
+      }
 
-      default:
+      default: {
         const [wordToken, wordPos] = tokenizeWord(input, position);
         tokens.push(wordToken);
         position = wordPos;
+      }
     }
   }
 

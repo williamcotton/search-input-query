@@ -64,9 +64,6 @@ do
     addInfixOperator "AND" 2 Associativity.Left (fun x y -> And(x, y))
     addInfixOperator "OR" 1 Associativity.Left (fun x y -> Or(x, y))
 
-
-
-// Main parser for the full search query
 let rec combineWithAnd exprs =
     match exprs with
     | [] -> None

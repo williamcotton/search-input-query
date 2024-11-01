@@ -64,10 +64,28 @@ do
     addInfixOperator "AND" 2 Associativity.Left (fun x y -> And(x, y))
     addInfixOperator "OR" 1 Associativity.Left (fun x y -> Or(x, y))
 
-// Parse a primary expression (term or parenthesized expression)
+
+
+// Main parser for the full search query
+let rec combineWithAnd exprs =
+    match exprs with
+    | [] -> None
+    | [single] -> Some single
+    | multiple -> Some(multiple |> List.reduce (fun left right -> And(left, right)))
+
+// Parse a sequence of expressions within parentheses or a single term
 let primaryExpr =
-    (between (pchar '(' .>> spaces) (pchar ')') expr)
-    <|> term
+    let parenExpr = 
+        between 
+            (pchar '(' .>> spaces) 
+            (pchar ')') 
+            (many1 (expr .>> spaces)
+             |>> fun exprs -> 
+                match combineWithAnd exprs with
+                | Some expr -> expr
+                | None -> failwith "Empty parentheses not allowed")
+    
+    (attempt parenExpr <|> term)
     .>> spaces
 
 // Implement the expression parser
@@ -76,15 +94,9 @@ opp.TermParser <- primaryExpr
 
 // Main parser for the full search query
 let searchParser =
-    spaces >>. many expr .>> spaces .>> eof
+    spaces >>. many1 (expr .>> spaces) .>> eof
     |>> fun exprs ->
-        let mainExpr =
-            match exprs with
-            | [] -> None
-            | [single] -> Some single
-            | multiple ->
-                Some(multiple |> List.reduce (fun left right -> And(left, right)))
-        { Expression = mainExpr }
+        { Expression = combineWithAnd exprs }
 
 // Helper function to stringify expressions
 let rec stringify = function

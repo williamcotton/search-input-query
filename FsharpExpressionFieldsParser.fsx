@@ -61,8 +61,8 @@ let addInfixOperator str precedence associativity f =
 
 // Setup operator precedence
 do
-    addInfixOperator "AND" 2 Associativity.Left (fun x y -> And(x, y))
-    addInfixOperator "OR" 1 Associativity.Left (fun x y -> Or(x, y))
+    addInfixOperator "AND" 2 Associativity.Right (fun x y -> And(x, y))
+    addInfixOperator "OR" 1 Associativity.Right (fun x y -> Or(x, y))
 
 let rec combineWithAnd exprs =
     match exprs with

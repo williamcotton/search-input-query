@@ -25,7 +25,8 @@ function App() {
       // Monaco ships with out of the box enums for keycodes and modifiers
       keybindings: [monaco.KeyCode.Enter],
       run: () => {
-        console.log("123")
+      const currentValue = editor.getValue();
+      console.log(currentValue);
       },
     });
   };

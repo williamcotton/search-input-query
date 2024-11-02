@@ -25,25 +25,40 @@ let escapedChar =
         anyChar               // \x -> x (treat escape as nothing for any other char)
     ])
 
+// Define reserved words
+let reservedWords = set ["AND"; "OR"]
+
+// Helper to check if a string is a reserved word
+let isReservedWord (word: string) = 
+    reservedWords.Contains(word.ToUpper())
+
+// Helper to create a parser that fails if the input is a reserved word
+let notReservedWord p =
+    p >>= fun result ->
+        if isReservedWord result
+        then fail (sprintf "Cannot use reserved word '%s' as identifier" result)
+        else preturn result
+
 // Parser for quoted string that correctly handles escaping
-let quotedString = 
-    between 
-        (pchar '"') 
+let quotedString =
+    between
+        (pchar '"')
         (pchar '"')
         (manyChars (escapedChar <|> noneOf "\"\\"))
-
 
 // Parse a word (unquoted string - stops at whitespace, quotes, parens, or standalone AND/OR)
 let unquotedString =
     many1Chars (noneOf " \"():") 
+    |> notReservedWord
 
-// Parse a field:value pair
+// Parse a field:value pair with reserved word checking for field names
 let fieldValue =
-    pipe3 
-        (many1Chars (noneOf " \"():") .>> spaces) 
+    pipe3
+        (many1Chars (noneOf " \"():") |> notReservedWord .>> spaces)
         (pchar ':' >>. spaces)
-        (quotedString <|> many1Chars (noneOf " \"()")) 
+        (quotedString <|> many1Chars (noneOf " \"()"))
         (fun field _ value -> Field(field, value))
+
 
 // Parse a term (either field:value, quoted string, or unquoted string)
 let term =

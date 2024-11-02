@@ -57,7 +57,7 @@ let fieldValue =
         (many1Chars (noneOf " \"():") |> notReservedWord .>> spaces)
         (pchar ':' >>. spaces)
         (quotedString <|> many1Chars (noneOf " \"()"))
-        (fun field _ value -> Field(field, value))
+        (fun field _ value -> Field(field.ToLower(), value))
 
 
 // Parse a term (either field:value, quoted string, or unquoted string)

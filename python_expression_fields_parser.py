@@ -72,8 +72,8 @@ def t_error(t):
 
 # Parser rules
 precedence = (
-    ('right', 'OR'),
-    ('right', 'AND'),
+    ('left', 'OR'),
+    ('left', 'AND'),
 )
 
 def p_search_query(p):

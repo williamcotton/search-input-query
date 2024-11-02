@@ -313,7 +313,7 @@ const parseExpression = (
 
       const operator = token.type;
       const nextStream = advanceStream(result.stream);
-      const right = parseExpression(nextStream, precedence);
+      const right = parseExpression(nextStream, precedence + 1);
 
       result = {
         result: {
@@ -335,7 +335,7 @@ const parseExpression = (
       const precedence = getOperatorPrecedence(TokenType.AND);
       if (precedence < minPrecedence) break;
 
-      const right = parseExpression(result.stream, precedence);
+      const right = parseExpression(result.stream, precedence + 1);
       result = {
         result: {
           type: TokenType.AND,

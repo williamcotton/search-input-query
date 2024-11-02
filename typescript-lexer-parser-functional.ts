@@ -60,6 +60,11 @@ const createStream = (tokens: Token[]): TokenStream => ({
   position: 0,
 });
 
+const peakToken = (stream: TokenStream): Token =>
+  stream.position + 1 < stream.tokens.length
+    ? stream.tokens[stream.position + 1]
+    : { type: TokenType.EOF, value: "", position: stream.position + 1, length: 0 };
+
 const currentToken = (stream: TokenStream): Token =>
   stream.position < stream.tokens.length
     ? stream.tokens[stream.position]
@@ -264,8 +269,10 @@ const parsePrimary = (
     case TokenType.WORD: {
       try {
         return parseFieldValue(stream);
-      } catch {
-        // If it's not a valid field:value, treat it as a term
+      } catch (e: any) {
+        if (peakToken(stream).type === TokenType.COLON && e.message === 'Expected field value') {
+          throw new Error("Expected field value");
+        }
         return {
           result: { type: 'TERM', value: token.value },
           stream: advanceStream(stream)
@@ -373,7 +380,7 @@ const parseSearchQuery = (input: string): SearchQuery => {
     const result = parseExpression(stream);
     return { expression: result.result };
   } catch (error) {
-    console.error('Parse error:', error);
+    console.log('Parse error:', error);
     return { expression: null };
   }
 };
@@ -381,24 +388,43 @@ const parseSearchQuery = (input: string): SearchQuery => {
 // Test the parser with various queries
 const testQueries = [
   '"red shoes" OR ((blue OR purple) AND sneakers)',
-  'comfortable AND (leather OR suede)',
+  "comfortable AND (leather OR suede)",
+  "(winter OR summer) AND boots",
+  "boots summer",
+  "color:red AND size:large",
   'category:"winter boots" AND (color:black OR color:brown)',
-  'boots summer',
-  'color:red AND size:large',
-  'winter boots color:blue',
+  "winter boots color:blue",
+  "red boots black",
+  "red (boots black)",
+  "AND:value",
+  "OR:test",
   'brand:"Nike\\Air"',
-  'field: value',
-  'a AND b OR c',
-  'category:"winter boots" AND (color:black OR color:brown) AND size:12',
-  'red boots color:blue date:2024-01-01',
-  'winter boots ((user_id:123 OR admin_id:456) AND status:active)',
-  'winter (boots shoes)'
+  'brand:"Nike"Air"',
+  'brand:"Nike\\"Air"',
+  "field: value",
+  "field :value",
+  "field : value",
+  "a AND b OR c",
+  "a OR b AND c",
+  "a OR b OR c AND d",
+  "",
+  "()",
+  "field:",
+  ":value",
+  "(a OR b) c d",
+  "a AND (b OR c) AND d",
+  "((a AND b) OR c) AND d",
+  'status:"pending review"',
+  "category:pending review",
+  "size:large color:red status:available",
+  'category:"winter boots" AND (color:black OR color:brown) AND size:12'
 ];
 
 for (const query of testQueries) {
   console.log('\nParsing query:', query);
   try {
     const result = parseSearchQuery(query);
+    console.log(result);
     if (result.expression) {
       console.log('Parsed expression:', stringify(result.expression));
     } else {
@@ -406,7 +432,7 @@ for (const query of testQueries) {
     }
   } catch (error) {
     if (error instanceof Error) {
-      console.error('Error parsing query:', error.message);
+      console.log('Error parsing query:', error.message);
     }
   }
 }

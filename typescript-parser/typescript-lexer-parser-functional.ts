@@ -1,5 +1,3 @@
-#!/usr/bin/env ts-node
-
 // Token types and data structures
 enum TokenType {
   WORD = "WORD",
@@ -81,7 +79,12 @@ const createStream = (tokens: Token[]): TokenStream => ({
 const peakToken = (stream: TokenStream): Token =>
   stream.position + 1 < stream.tokens.length
     ? stream.tokens[stream.position + 1]
-    : { type: TokenType.EOF, value: "", position: stream.position + 1, length: 0 };
+    : {
+        type: TokenType.EOF,
+        value: "",
+        position: stream.position + 1,
+        length: 0,
+      };
 
 const currentToken = (stream: TokenStream): Token =>
   stream.position < stream.tokens.length
@@ -133,7 +136,11 @@ const tokenizeQuotedString = (
   throw { message: "Unterminated quoted string", position, length };
 };
 
-const tokenizeWord = (input: string, position: number): [Token, number] => {
+const tokenizeWord = (
+  input: string,
+  position: number,
+  isFieldValue: boolean = false
+): [Token, number] => {
   let value = "";
   let pos = position;
 
@@ -142,11 +149,12 @@ const tokenizeWord = (input: string, position: number): [Token, number] => {
     pos++;
   }
 
+  // Only treat AND/OR as operators when not in a field value context
   const type =
-    value === "AND"
-      ? TokenType.AND
-      : value === "OR"
-      ? TokenType.OR
+    !isFieldValue && (value === "AND" || value === "OR")
+      ? value === "AND"
+        ? TokenType.AND
+        : TokenType.OR
       : TokenType.WORD;
 
   return [
@@ -163,6 +171,7 @@ const tokenizeWord = (input: string, position: number): [Token, number] => {
 const tokenize = (input: string): Token[] => {
   const tokens: Token[] = [];
   let position = 0;
+  let expectingFieldValue = false;
 
   while (position < input.length) {
     const char = input[position];
@@ -177,6 +186,7 @@ const tokenize = (input: string): Token[] => {
         const [quotedToken, newPos] = tokenizeQuotedString(input, position);
         tokens.push(quotedToken);
         position = newPos;
+        expectingFieldValue = false;
         break;
       }
 
@@ -188,6 +198,7 @@ const tokenize = (input: string): Token[] => {
           length: 1,
         });
         position++;
+        expectingFieldValue = true;
         break;
       }
 
@@ -199,6 +210,7 @@ const tokenize = (input: string): Token[] => {
           length: 1,
         });
         position++;
+        expectingFieldValue = false;
         break;
       }
 
@@ -210,13 +222,19 @@ const tokenize = (input: string): Token[] => {
           length: 1,
         });
         position++;
+        expectingFieldValue = false;
         break;
       }
 
       default: {
-        const [wordToken, wordPos] = tokenizeWord(input, position);
+        const [wordToken, wordPos] = tokenizeWord(
+          input,
+          position,
+          expectingFieldValue
+        );
         tokens.push(wordToken);
         position = wordPos;
+        expectingFieldValue = false;
       }
     }
   }
@@ -230,40 +248,54 @@ interface ParseResult<T> {
   readonly stream: TokenStream;
 }
 
-const expectToken = (
-  stream: TokenStream,
-  type: TokenType
-): TokenStream => {
+const expectToken = (stream: TokenStream, type: TokenType): TokenStream => {
   const token = currentToken(stream);
   if (token.type !== type) {
-    throw { message: `Expected ${type}`, position: token.position, length: token.length };
+    throw {
+      message: `Expected ${type}`,
+      position: token.position,
+      length: token.length,
+    };
   }
   return advanceStream(stream);
 };
 
-const parseFieldValue = (
-  stream: TokenStream
-): ParseResult<Expression> => {
+const parseFieldValue = (stream: TokenStream): ParseResult<Expression> => {
   const keyToken = currentToken(stream);
   if (keyToken.type !== TokenType.WORD) {
-    throw { message: 'Expected field name', position: keyToken.position, length: keyToken.length };
+    throw {
+      message: "Expected field name",
+      position: keyToken.position,
+      length: keyToken.length,
+    };
   }
 
   let newStream = advanceStream(stream);
   const colonToken = currentToken(newStream);
   if (colonToken.type !== TokenType.COLON) {
-    throw { message: 'Expected colon', position: colonToken.position, length: colonToken.length };
+    throw {
+      message: "Expected colon",
+      position: colonToken.position,
+      length: colonToken.length,
+    };
   }
 
   newStream = advanceStream(newStream);
   const valueToken = currentToken(newStream);
-  if (valueToken.type !== TokenType.WORD && valueToken.type !== TokenType.QUOTED_STRING) {
-    throw { message: 'Expected field value', position: valueToken.position, length: valueToken.length };
+  if (
+    valueToken.type !== TokenType.WORD &&
+    valueToken.type !== TokenType.QUOTED_STRING
+  ) {
+    throw {
+      message: "Expected field value",
+      position: valueToken.position,
+      length: valueToken.length,
+    };
   }
 
   return {
     result: {
-      type: 'FIELD',
+      type: "FIELD",
       key: keyToken.value.toLowerCase(),
       value: valueToken.value,
       keyPosition: keyToken.position,
@@ -271,13 +303,11 @@ const parseFieldValue = (
       valuePosition: valueToken.position,
       valueLength: valueToken.length,
     },
-    stream: advanceStream(newStream)
+    stream: advanceStream(newStream),
   };
 };
 
-const parsePrimary = (
-  stream: TokenStream
-): ParseResult<Expression> => {
+const parsePrimary = (stream: TokenStream): ParseResult<Expression> => {
   const token = currentToken(stream);
 
   switch (token.type) {
@@ -292,19 +322,24 @@ const parsePrimary = (
       try {
         return parseFieldValue(stream);
       } catch (e: any) {
-        if (peakToken(stream).type === TokenType.COLON && e.message === 'Expected field value') {
-          // throw error with position and length in object form
-          throw { message: e.message, position: token.position, length: token.length };
-          
+        if (
+          peakToken(stream).type === TokenType.COLON &&
+          e.message === "Expected field value"
+        ) {
+          throw {
+            message: e.message,
+            position: token.position,
+            length: token.length,
+          };
         }
         return {
-          result: { 
-            type: 'TERM',
+          result: {
+            type: "TERM",
             value: token.value,
             position: token.position,
-            length: token.length
+            length: token.length,
           },
-          stream: advanceStream(stream)
+          stream: advanceStream(stream),
         };
       }
     }
@@ -312,30 +347,41 @@ const parsePrimary = (
     case TokenType.QUOTED_STRING:
       return {
         result: {
-          type: 'TERM',
+          type: "TERM",
           value: token.value,
           position: token.position,
-          length: token.length
+          length: token.length,
         },
-        stream: advanceStream(stream)
+        stream: advanceStream(stream),
       };
 
     case TokenType.AND:
     case TokenType.OR:
-      throw { message: `${token.value} is a reserved word`, position: token.position, length: token.length };
+      throw {
+        message: `${token.value} is a reserved word`,
+        position: token.position,
+        length: token.length,
+      };
 
     case TokenType.RPAREN:
-      throw { message: 'Unexpected ")"', position: token.position, length: token.length };
+      throw {
+        message: 'Unexpected ")"',
+        position: token.position,
+        length: token.length,
+      };
 
     default:
-      throw { message: 'Unexpected token', position: token.position, length: token.length };
+      console.log("Unexpected token:", token);
+      throw {
+        message: "Unexpected token",
+        position: token.position,
+        length: token.length,
+      };
   }
 };
 
 const getOperatorPrecedence = (type: TokenType): number =>
-  type === TokenType.AND ? 2
-  : type === TokenType.OR ? 1
-  : 0;
+  type === TokenType.AND ? 2 : type === TokenType.OR ? 1 : 0;
 
 const parseExpression = (
   stream: TokenStream,
@@ -362,9 +408,9 @@ const parseExpression = (
           left: result.result,
           right: right.result,
           position: token.position,
-          length: token.length
+          length: token.length,
         },
-        stream: right.stream
+        stream: right.stream,
       };
       continue;
     }
@@ -385,9 +431,9 @@ const parseExpression = (
           left: result.result,
           right: right.result,
           position: token.position,
-          length: token.length
+          length: token.length,
         },
-        stream: right.stream
+        stream: right.stream,
       };
       continue;
     }
@@ -402,7 +448,7 @@ const parseExpression = (
 const stringify = (expr: Expression): string => {
   switch (expr.type) {
     case "TERM":
-      return expr.value.includes(' ') ? `"${expr.value}"` : expr.value;
+      return expr.value.includes(" ") ? `"${expr.value}"` : expr.value;
     case "FIELD":
       return `${expr.key}:${expr.value}`;
     case "AND":
@@ -417,91 +463,43 @@ const parseSearchQuery = (input: string): SearchQuery | SearchQueryError => {
   try {
     const tokens = tokenize(input);
     const stream = createStream(tokens);
-    
+
     if (currentToken(stream).type === TokenType.EOF) {
       return { type: "SEARCH_QUERY", expression: null };
     }
 
     const result = parseExpression(stream);
+
+    // Check for any remaining tokens after parsing is complete
+    const finalToken = currentToken(result.stream);
+    if (finalToken.type !== TokenType.EOF) {
+      throw {
+        message: 'Unexpected ")"',
+        position: finalToken.position,
+        length: finalToken.length,
+      };
+    }
+
     return { type: "SEARCH_QUERY", expression: result.result };
   } catch (error: any) {
-    // console.log('Parse error:', error);
-    return { type: "SEARCH_QUERY_ERROR", expression: null, error: error.message, position: error.position, length: error.length };
+    return {
+      type: "SEARCH_QUERY_ERROR",
+      expression: null,
+      error: error.message,
+      position: error.position,
+      length: error.length,
+    };
   }
 };
-
-// // Test the parser with various queries
-// const testQueries = [
-//   '"red shoes" OR ((blue OR purple) AND sneakers)',
-//   "comfortable AND (leather OR suede)",
-//   "(winter OR summer) AND boots",
-//   "boots summer",
-//   "color:red AND size:large",
-//   'category:"winter boots" AND (color:black OR color:brown)',
-//   "winter boots color:blue",
-//   "red boots black",
-//   "red (boots black)",
-//   "AND:value",
-//   "OR:test",
-//   'brand:"Nike\\Air"',
-//   'brand:"Nike"Air"',
-//   'brand:"Nike\\"Air"',
-//   "field: value",
-//   "field :value",
-//   "field : value",
-//   "a AND b OR c",
-//   "a OR b AND c",
-//   "a OR b OR c AND d",
-//   "",
-//   "()",
-//   "field:",
-//   ":value",
-//   "(a OR b) c d",
-//   "a AND (b OR c) AND d",
-//   "((a AND b) OR c) AND d",
-//   'status:"pending review"',
-//   "category:pending review",
-//   "size:large color:red status:available",
-//   'category:"winter boots" AND (color:black OR color:brown) AND size:12',
-//   'category:"winter boots" AND (color:black OR color:brown) AND AND:2',
-//   'category:"winter boots" AND (OR:black OR color:brown) AND AND:2' 
-// ];
-
-// for (const query of testQueries) {
-//   console.log("\n");
-//   console.log(query);
-//   try {
-//     const result = parseSearchQuery(query);
-//     console.log(result);
-//     switch (result.type) {
-//     case "SEARCH_QUERY":
-//       if (result.expression) {
-//         console.log("Stringified:", stringify(result.expression));
-//       }
-//       break;
-//     case "SEARCH_QUERY_ERROR":
-//       const errorPosition = result.position || 0;
-//       const errorLength = result.length || 1;
-//       const errorLine = query.split("\n")[0];
-//       console.log(errorLine);
-//       console.log(" ".repeat(errorPosition) + "^".repeat(errorLength));
-
-//       console.log("Error:", result.error);
-//       break;
-//     }
-//   } catch (error) {
-//     console.error(error);
-//   }
-// }
 
 export {
   parseSearchQuery,
   stringify,
-  type SearchQueryError,
   type SearchQuery,
+  type SearchQueryError,
   type Expression,
   type SearchTerm,
   type FieldValue,
   type AndExpression,
-  type OrExpression
+  type OrExpression,
 };

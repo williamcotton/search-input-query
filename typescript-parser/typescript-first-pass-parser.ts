@@ -499,7 +499,15 @@ const parseSearchQuery = (input: string): SearchQuery | SearchQueryError => {
 
     console.log(errors);
 
-
+    if (errors.length > 0) {
+      return {
+        type: "SEARCH_QUERY_ERROR",
+        expression: null,
+        error: errors[0].message,
+        position: errors[0].position,
+        length: errors[0].length,
+      };
+    }
     return { type: "SEARCH_QUERY", expression: result.result };
   } catch (error: any) {
     return {
@@ -558,6 +566,7 @@ const testQueries = [
   "field:value",
   "field:",
   ":value",
+  'category:"winter boots" AND (AND OR color:) AND size:12',
 ];
 
 for (const query of testQueries) {

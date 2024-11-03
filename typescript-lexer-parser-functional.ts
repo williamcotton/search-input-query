@@ -24,34 +24,52 @@ interface TokenStream {
   readonly position: number;
 }
 
+type PositionLength = {
+  position: number;
+  length: number;
+};
+
 // AST types
 type SearchTerm = {
   readonly type: "TERM";
   readonly value: string;
-};
+} & PositionLength;
 
 type FieldValue = {
   readonly type: "FIELD";
   readonly key: string;
   readonly value: string;
+  readonly keyPosition: number;
+  readonly keyLength: number;
+  readonly valuePosition: number;
+  readonly valueLength: number;
 };
 
 type AndExpression = {
   readonly type: "AND";
   readonly left: Expression;
   readonly right: Expression;
-};
+} & PositionLength;
 
 type OrExpression = {
   readonly type: "OR";
   readonly left: Expression;
   readonly right: Expression;
-};
+} & PositionLength;
 
 type Expression = SearchTerm | FieldValue | AndExpression | OrExpression;
 
 type SearchQuery = {
+  readonly type: "SEARCH_QUERY";
   readonly expression: Expression | null;
+};
+
+type SearchQueryError = {
+  readonly type: "SEARCH_QUERY_ERROR";
+  readonly expression: null;
+  readonly error?: string;
+  readonly position?: number;
+  readonly length?: number;
 };
 
 // Tokenizer functions
@@ -112,7 +130,7 @@ const tokenizeQuotedString = (
     }
   }
 
-  throw new Error("Unterminated quoted string");
+  throw { message: "Unterminated quoted string", position, length };
 };
 
 const tokenizeWord = (input: string, position: number): [Token, number] => {
@@ -218,7 +236,7 @@ const expectToken = (
 ): TokenStream => {
   const token = currentToken(stream);
   if (token.type !== type) {
-    throw new Error(`Expected ${type} but got ${token.type}`);
+    throw { message: `Expected ${type}`, position: token.position, length: token.length };
   }
   return advanceStream(stream);
 };
@@ -228,26 +246,30 @@ const parseFieldValue = (
 ): ParseResult<Expression> => {
   const keyToken = currentToken(stream);
   if (keyToken.type !== TokenType.WORD) {
-    throw new Error('Expected field name');
+    throw { message: 'Expected field name', position: keyToken.position, length: keyToken.length };
   }
 
   let newStream = advanceStream(stream);
   const colonToken = currentToken(newStream);
   if (colonToken.type !== TokenType.COLON) {
-    throw new Error('Expected colon after field name');
+    throw { message: 'Expected colon', position: colonToken.position, length: colonToken.length };
   }
 
   newStream = advanceStream(newStream);
   const valueToken = currentToken(newStream);
   if (valueToken.type !== TokenType.WORD && valueToken.type !== TokenType.QUOTED_STRING) {
-    throw new Error('Expected field value');
+    throw { message: 'Expected field value', position: valueToken.position, length: valueToken.length };
   }
 
   return {
     result: {
       type: 'FIELD',
       key: keyToken.value.toLowerCase(),
-      value: valueToken.value
+      value: valueToken.value,
+      keyPosition: keyToken.position,
+      keyLength: keyToken.length,
+      valuePosition: valueToken.position,
+      valueLength: valueToken.length,
     },
     stream: advanceStream(newStream)
   };
@@ -271,10 +293,17 @@ const parsePrimary = (
         return parseFieldValue(stream);
       } catch (e: any) {
         if (peakToken(stream).type === TokenType.COLON && e.message === 'Expected field value') {
-          throw new Error("Expected field value");
+          // throw error with position and length in object form
+          throw { message: e.message, position: token.position, length: token.length };
+          
         }
         return {
-          result: { type: 'TERM', value: token.value },
+          result: { 
+            type: 'TERM',
+            value: token.value,
+            position: token.position,
+            length: token.length
+          },
           stream: advanceStream(stream)
         };
       }
@@ -282,12 +311,25 @@ const parsePrimary = (
 
     case TokenType.QUOTED_STRING:
       return {
-        result: { type: 'TERM', value: token.value },
+        result: {
+          type: 'TERM',
+          value: token.value,
+          position: token.position,
+          length: token.length
+        },
         stream: advanceStream(stream)
       };
 
+    case TokenType.AND:
+    case TokenType.OR:
+      throw { message: `${token.value} is a reserved word`, position: token.position, length: token.length };
+
+    case TokenType.RPAREN:
+      throw { message: 'Unexpected ")"', position: token.position, length: token.length };
+
     default:
-      throw new Error(`Unexpected token: ${token.type}`);
+      console.log('Unexpected token:', token);
+      throw { message: 'Unexpected token', position: token.position, length: token.length };
   }
 };
 
@@ -319,7 +361,9 @@ const parseExpression = (
         result: {
           type: operator,
           left: result.result,
-          right: right.result
+          right: right.result,
+          position: token.position,
+          length: token.length
         },
         stream: right.stream
       };
@@ -340,7 +384,9 @@ const parseExpression = (
         result: {
           type: TokenType.AND,
           left: result.result,
-          right: right.result
+          right: right.result,
+          position: token.position,
+          length: token.length
         },
         stream: right.stream
       };
@@ -368,20 +414,20 @@ const stringify = (expr: Expression): string => {
 };
 
 // Main parse function
-const parseSearchQuery = (input: string): SearchQuery => {
+const parseSearchQuery = (input: string): SearchQuery | SearchQueryError => {
   try {
     const tokens = tokenize(input);
     const stream = createStream(tokens);
     
     if (currentToken(stream).type === TokenType.EOF) {
-      return { expression: null };
+      return { type: "SEARCH_QUERY", expression: null };
     }
 
     const result = parseExpression(stream);
-    return { expression: result.result };
-  } catch (error) {
-    console.log('Parse error:', error);
-    return { expression: null };
+    return { type: "SEARCH_QUERY", expression: result.result };
+  } catch (error: any) {
+    // console.log('Parse error:', error);
+    return { type: "SEARCH_QUERY_ERROR", expression: null, error: error.message, position: error.position, length: error.length };
   }
 };
 
@@ -417,23 +463,35 @@ const testQueries = [
   'status:"pending review"',
   "category:pending review",
   "size:large color:red status:available",
-  'category:"winter boots" AND (color:black OR color:brown) AND size:12'
+  'category:"winter boots" AND (color:black OR color:brown) AND size:12',
+  'category:"winter boots" AND (color:black OR color:brown) AND AND:2',
+  'category:"winter boots" AND (OR:black OR color:brown) AND AND:2' 
 ];
 
 for (const query of testQueries) {
-  console.log('\nParsing query:', query);
+  console.log("\n");
+  console.log(query);
   try {
     const result = parseSearchQuery(query);
     console.log(result);
-    if (result.expression) {
-      console.log('Parsed expression:', stringify(result.expression));
-    } else {
-      console.log('No expression');
+    switch (result.type) {
+    case "SEARCH_QUERY":
+      if (result.expression) {
+        console.log("Stringified:", stringify(result.expression));
+      }
+      break;
+    case "SEARCH_QUERY_ERROR":
+      const errorPosition = result.position || 0;
+      const errorLength = result.length || 1;
+      const errorLine = query.split("\n")[0];
+      console.log(errorLine);
+      console.log(" ".repeat(errorPosition) + "^".repeat(errorLength));
+
+      console.log("Error:", result.error);
+      break;
     }
   } catch (error) {
-    if (error instanceof Error) {
-      console.log('Error parsing query:', error.message);
-    }
+    console.error(error);
   }
 }
 

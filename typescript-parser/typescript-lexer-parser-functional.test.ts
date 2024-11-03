@@ -94,6 +94,11 @@ describe("Search Query Parser", () => {
       testValidQuery("field_name:value", "field_name:value");
       testValidQuery("field-name:value", "field-name:value");
     });
+
+    test("handles reserved words as identifiers", () => {
+      testValidQuery("field:AND", "field:AND");
+      testValidQuery("field:OR", "field:OR");
+    });
   });
 
   describe("Logical Operators", () => {
@@ -162,6 +167,10 @@ describe("Search Query Parser", () => {
         "(((a OR b) AND (c OR d)) OR ((e OR f) AND (g OR h)))"
       );
     });
+
+    test("handles other parentheses", () => {
+      testValidQuery("((test))", "test");
+    });
   });
 
   describe("Complex Queries", () => {
@@ -218,13 +227,10 @@ describe("Search Query Parser", () => {
     test("handles reserved words as identifiers", () => {
       testErrorQuery("AND:value", "AND is a reserved word");
       testErrorQuery("OR:test", "OR is a reserved word");
-      testValidQuery("field:AND", "field:AND");
-      testValidQuery("field:OR", "field:OR");
     });
 
     test("handles malformed parentheses", () => {
       testErrorQuery("()", 'Unexpected ")"');
-      testValidQuery("((test))", "test");
       testErrorQuery("(test))", 'Unexpected ")"');
     });
 

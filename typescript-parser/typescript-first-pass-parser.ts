@@ -59,6 +59,12 @@ type SearchQueryError = {
   readonly length?: number;
 };
 
+type ValidationError = {
+  message: string;
+  position: number;
+  length: number;
+};
+
 // Tokenizer functions
 const createStream = (tokens: Token[]): TokenStream => ({
   tokens,
@@ -177,9 +183,18 @@ const tokenizeString = (
       value += input[pos];
       pos++;
     }
+
+    // Always return as STRING when it's a field:value pattern
+    return [{
+      type: TokenType.STRING,
+      value,
+      position,
+      length: pos - position
+    }, pos];
   }
 
-  const type = value === "AND" || value === "OR" 
+  // Only treat standalone AND/OR as operators
+  const type = (value === "AND" || value === "OR") && !value.includes(':')
     ? value === "AND" ? TokenType.AND : TokenType.OR
     : TokenType.STRING;
 
@@ -275,6 +290,8 @@ const parsePrimary = (stream: TokenStream): ParseResult<Expression> => {
 
     case TokenType.STRING:
     case TokenType.QUOTED_STRING:
+    case TokenType.AND:
+    case TokenType.OR:
       return {
         result: {
           type: "STRING",
@@ -283,14 +300,6 @@ const parsePrimary = (stream: TokenStream): ParseResult<Expression> => {
           length: token.length,
         },
         stream: advanceStream(stream),
-      };
-
-    case TokenType.AND:
-    case TokenType.OR:
-      throw {
-        message: `${token.value} is a reserved word`,
-        position: token.position,
-        length: token.length,
       };
 
     case TokenType.RPAREN:
@@ -385,6 +394,86 @@ const stringify = (expr: Expression): string => {
   }
 };
 
+const reservedWords = new Set(["AND", "OR"]);
+
+// Validate individual strings (field:value pairs or plain terms)
+const validateString = (expr: StringLiteral, errors: ValidationError[]) => {
+  // Check for empty field values
+  if (expr.value.endsWith(':')) {
+    errors.push({
+      message: 'Empty field value',
+      position: expr.position,
+      length: expr.length
+    });
+  }
+
+  // Check for field values that start with colon
+  if (expr.value.startsWith(':')) {
+    errors.push({
+      message: 'Missing field name',
+      position: expr.position,
+      length: expr.length
+    });
+  }
+
+  // Check for quoted strings with unescaped quotes
+  if (expr.value.includes('"') && !expr.value.includes('\\"')) {
+    errors.push({
+      message: 'Unescaped quote in value',
+      position: expr.position,
+      length: expr.length
+    });
+  }
+
+  // Check for invalid characters in field names
+  if (expr.value.includes(':')) {
+    const [fieldName] = expr.value.split(':');
+    if (!/^[a-zA-Z0-9_]+$/.test(fieldName)) {
+      errors.push({
+        message: 'Invalid characters in field name',
+        position: expr.position,
+        length: fieldName.length
+      });
+    }
+  }
+
+  // Check for reserved words used as identifiers
+  if (reservedWords.has(expr.value)) {
+    errors.push({
+      message: `${expr.value} is a reserved word`,
+      position: expr.position,
+      length: expr.length
+    });
+  }
+
+};
+
+const walkExpression = (expr: Expression, errors: ValidationError[]) => {
+  switch (expr.type) {
+    case "STRING":
+      validateString(expr, errors);
+      break;
+    case "AND":
+    case "OR":
+      walkExpression(expr.left, errors);
+      walkExpression(expr.right, errors);
+      break;
+  }
+};
+
+const validateSearchQuery = (query: SearchQuery): ValidationError[] => {
+  const errors: ValidationError[] = [];
+
+  if (query.expression === null) {
+    return errors;
+  }
+
+  walkExpression(query.expression, errors);
+
+  return errors;
+};
+
+
 // Main parse function
 const parseSearchQuery = (input: string): SearchQuery | SearchQueryError => {
   try {
@@ -405,6 +494,11 @@ const parseSearchQuery = (input: string): SearchQuery | SearchQueryError => {
         length: finalToken.length,
       };
     }
+
+    const errors = validateSearchQuery({ type: "SEARCH_QUERY", expression: result.result });
+
+    console.log(errors);
+
 
     return { type: "SEARCH_QUERY", expression: result.result };
   } catch (error: any) {
@@ -445,16 +539,11 @@ const testQueries = [
   'brand:"Nike\\Air"',
   'brand:"Nike"Air"',
   'brand:"Nike\\"Air"',
-  "field: value",
-  "field :value",
-  "field : value",
   "a AND b OR c",
   "a OR b AND c",
   "a OR b OR c AND d",
   "",
   "()",
-  "field:",
-  ":value",
   "(a OR b) c d",
   "a AND (b OR c) AND d",
   "((a AND b) OR c) AND d",
@@ -462,7 +551,13 @@ const testQueries = [
   "category:pending review",
   "size:large color:red status:available",
   'category:"winter boots" AND (color:black OR color:brown) AND size:12',
-  'AND OR AND',
+  "AND OR AND",
+  "field: value",
+  "field :value",
+  "field : value",
+  "field:value",
+  "field:",
+  ":value",
 ];
 
 for (const query of testQueries) {

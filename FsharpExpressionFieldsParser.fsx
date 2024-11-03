@@ -23,7 +23,7 @@ let escapedChar =
         pchar '"' >>% '"'     // \" -> "
         pchar '\\' >>% '\\'   // \\ -> \
         anyChar               // \x -> x (treat escape as nothing for any other char)
-    ])
+    ]) <?> "escaped character"
 
 // Define reserved words
 let reservedWords = set ["AND"; "OR"]
@@ -42,29 +42,29 @@ let notReservedWord p =
 // Parser for quoted string that correctly handles escaping
 let quotedString =
     between
-        (pchar '"')
-        (pchar '"')
-        (manyChars (escapedChar <|> noneOf "\"\\"))
+        (pchar '"' <?> "opening quote '\"'")
+        (pchar '"' <?> "closing quote '\"'")
+        (manyChars (escapedChar <|> noneOf "\"\\") <?> "string content") <?> "quoted string"
 
 // Parse a word (unquoted string - stops at whitespace, quotes, parens, or standalone AND/OR)
 let unquotedString =
     many1Chars (noneOf " \"():") 
-    |> notReservedWord
+    |> notReservedWord <?> "term"
 
 // Parse a field:value pair with reserved word checking for field names
 let fieldValue =
     pipe3
-        (many1Chars (noneOf " \"():") |> notReservedWord .>> spaces)
-        (pchar ':' >>. spaces)
-        (quotedString <|> many1Chars (noneOf " \"()"))
-        (fun field _ value -> Field(field.ToLower(), value))
+        (many1Chars (noneOf " \"():") |> notReservedWord .>> spaces <?> "field name")
+        (pchar ':' >>. spaces <?> "':'")
+        (quotedString <|> many1Chars (noneOf " \"()") <?> "field value")
+        (fun field _ value -> Field(field.ToLower(), value)) <?> "field:value pair"
 
 
 // Parse a term (either field:value, quoted string, or unquoted string)
 let term =
-    attempt fieldValue 
-    <|> (quotedString |>> Term)
-    <|> (unquotedString |>> Term)
+    attempt fieldValue <?> "field:value pair"
+    <|> (quotedString |>> Term <?> "quoted term")
+    <|> (unquotedString |>> Term <?> "term")
 
 // Parse logical operators with proper precedence
 let opp = new OperatorPrecedenceParser<Expression, unit, unit>()
@@ -79,25 +79,20 @@ do
     addInfixOperator "AND" 2 Associativity.Left (fun x y -> And(x, y))
     addInfixOperator "OR" 1 Associativity.Left (fun x y -> Or(x, y))
 
-let rec combineWithAnd exprs =
-    match exprs with
-    | [] -> None
-    | [single] -> Some single
-    | multiple -> Some(multiple |> List.reduce (fun left right -> And(left, right)))
+// Modify combineWithAnd to always return an Expression
+let combineWithAnd exprs =
+    exprs |> List.reduce (fun left right -> And(left, right))
 
 // Parse a sequence of expressions within parentheses or a single term
 let primaryExpr =
     let parenExpr = 
         between 
-            (pchar '(' .>> spaces) 
-            (pchar ')') 
+            (pchar '(' .>> spaces <?> "opening parenthesis '('") 
+            (pchar ')' <?> "closing parenthesis ')'") 
             (many1 (expr .>> spaces)
-             |>> fun exprs -> 
-                match combineWithAnd exprs with
-                | Some expr -> expr
-                | None -> failwith "Empty parentheses not allowed")
+             |>> combineWithAnd) <?> "expression in parentheses"
     
-    (attempt parenExpr <|> term)
+    (attempt parenExpr <|> term) <?> "primary expression"
     .>> spaces
 
 // Implement the expression parser
@@ -106,9 +101,9 @@ opp.TermParser <- primaryExpr
 
 // Main parser for the full search query
 let searchParser =
-    spaces >>. many1 (expr .>> spaces) .>> eof
+    spaces >>. many1 (expr .>> spaces) .>> eof <?> "end of search query"
     |>> fun exprs ->
-        { Expression = combineWithAnd exprs }
+        { Expression = Some (combineWithAnd exprs) }
 
 // Helper function to stringify expressions
 let rec stringify = function
@@ -172,6 +167,8 @@ let testQueries = [
     "category:pending review"
     "size:large color:red status:available"
     "category:\"winter boots\" AND (color:black OR color:brown) AND size:12"
+    "category:'winter boots' AND (color:black OR color:brown) AND AND:2"
+    "category:'winter boots' AND (OR:black OR color:brown) AND AND:2"
 ]
 
 testQueries |> List.iter testParser

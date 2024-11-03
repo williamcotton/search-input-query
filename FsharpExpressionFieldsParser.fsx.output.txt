@@ -1,0 +1,219 @@
+
+Parsing query: "red shoes" OR ((blue OR purple) AND sneakers)
+{ Expression =
+   Some
+     (Or
+        (Term "red shoes",
+         And (Or (Term "blue", Term "purple"), Term "sneakers"))) }
+Parsed expression: ("red shoes" OR ((blue OR purple) AND sneakers))
+
+
+Parsing query: comfortable AND (leather OR suede)
+{ Expression =
+   Some (And (Term "comfortable", Or (Term "leather", Term "suede"))) }
+Parsed expression: (comfortable AND (leather OR suede))
+
+
+Parsing query: (winter OR summer) AND boots
+{ Expression = Some (And (Or (Term "winter", Term "summer"), Term "boots")) }
+Parsed expression: ((winter OR summer) AND boots)
+
+
+Parsing query: boots summer
+{ Expression = Some (And (Term "boots", Term "summer")) }
+Parsed expression: (boots AND summer)
+
+
+Parsing query: color:red AND size:large
+{ Expression = Some (And (Field ("color", "red"), Field ("size", "large"))) }
+Parsed expression: (color:red AND size:large)
+
+
+Parsing query: category:"winter boots" AND (color:black OR color:brown)
+{ Expression =
+   Some
+     (And
+        (Field ("category", "winter boots"),
+         Or (Field ("color", "black"), Field ("color", "brown")))) }
+Parsed expression: (category:winter boots AND (color:black OR color:brown))
+
+
+Parsing query: winter boots color:blue
+{ Expression =
+   Some (And (And (Term "winter", Term "boots"), Field ("color", "blue"))) }
+Parsed expression: ((winter AND boots) AND color:blue)
+
+
+Parsing query: red boots black
+{ Expression = Some (And (And (Term "red", Term "boots"), Term "black")) }
+Parsed expression: ((red AND boots) AND black)
+
+
+Parsing query: red (boots black)
+{ Expression = Some (And (Term "red", And (Term "boots", Term "black"))) }
+Parsed expression: (red AND (boots AND black))
+
+
+Parsing query: AND:value
+Error: Error in Ln: 1 Col: 4
+AND:value
+   ^
+Expecting: any char not in ‘ "():’
+Other error messages:
+  Cannot use reserved word 'AND' as identifier
+
+
+
+Parsing query: OR:test
+Error: Error in Ln: 1 Col: 3
+OR:test
+  ^
+Expecting: any char not in ‘ "():’
+Other error messages:
+  Cannot use reserved word 'OR' as identifier
+
+
+
+Parsing query: brand:"Nike\Air"
+{ Expression = Some (Field ("brand", "NikeAir")) }
+Parsed expression: brand:NikeAir
+
+
+Parsing query: brand:"Nike\"Air"
+{ Expression = Some (Field ("brand", "Nike"Air")) }
+Parsed expression: brand:Nike"Air
+
+
+Parsing query: brand:"Nike\\"Air"
+Error: Error in Ln: 1 Col: 19
+brand:"Nike\\"Air"
+                  ^
+Note: The error occurred at the end of the input stream.
+Expecting: closing quote '"' or string content
+
+
+
+Parsing query: field: value
+{ Expression = Some (Field ("field", "value")) }
+Parsed expression: field:value
+
+
+Parsing query: field :value
+{ Expression = Some (Field ("field", "value")) }
+Parsed expression: field:value
+
+
+Parsing query: field : value
+{ Expression = Some (Field ("field", "value")) }
+Parsed expression: field:value
+
+
+Parsing query: a AND b OR c
+{ Expression = Some (Or (And (Term "a", Term "b"), Term "c")) }
+Parsed expression: ((a AND b) OR c)
+
+
+Parsing query: a OR b AND c
+{ Expression = Some (Or (Term "a", And (Term "b", Term "c"))) }
+Parsed expression: (a OR (b AND c))
+
+
+Parsing query: a OR b OR c AND d
+{ Expression = Some (Or (Or (Term "a", Term "b"), And (Term "c", Term "d"))) }
+Parsed expression: ((a OR b) OR (c AND d))
+
+
+Parsing query: 
+Error: Error in Ln: 1 Col: 1
+Note: The error occurred at the end of the input stream.
+Expecting: end of search query
+
+
+
+Parsing query: ()
+Error: Error in Ln: 1 Col: 1
+()
+^
+Expecting: end of search query
+
+
+
+Parsing query: field:
+Error: Error in Ln: 1 Col: 6
+field:
+     ^
+Expecting: any char not in ‘ "():’, end of input, infix operator or primary
+expression
+
+
+
+Parsing query: :value
+Error: Error in Ln: 1 Col: 1
+:value
+^
+Expecting: end of search query
+
+
+
+Parsing query: (a OR b) c d
+{ Expression = Some (And (And (Or (Term "a", Term "b"), Term "c"), Term "d")) }
+Parsed expression: (((a OR b) AND c) AND d)
+
+
+Parsing query: a AND (b OR c) AND d
+{ Expression = Some (And (And (Term "a", Or (Term "b", Term "c")), Term "d")) }
+Parsed expression: ((a AND (b OR c)) AND d)
+
+
+Parsing query: ((a AND b) OR c) AND d
+{ Expression = Some (And (Or (And (Term "a", Term "b"), Term "c"), Term "d")) }
+Parsed expression: (((a AND b) OR c) AND d)
+
+
+Parsing query: status:"pending review"
+{ Expression = Some (Field ("status", "pending review")) }
+Parsed expression: status:pending review
+
+
+Parsing query: category:pending review
+{ Expression = Some (And (Field ("category", "pending"), Term "review")) }
+Parsed expression: (category:pending AND review)
+
+
+Parsing query: size:large color:red status:available
+{ Expression =
+   Some
+     (And
+        (And (Field ("size", "large"), Field ("color", "red")),
+         Field ("status", "available"))) }
+Parsed expression: ((size:large AND color:red) AND status:available)
+
+
+Parsing query: category:"winter boots" AND (color:black OR color:brown) AND size:12
+{ Expression =
+   Some
+     (And
+        (And
+           (Field ("category", "winter boots"),
+            Or (Field ("color", "black"), Field ("color", "brown"))),
+         Field ("size", "12"))) }
+Parsed expression: ((category:winter boots AND (color:black OR color:brown)) AND size:12)
+
+
+Parsing query: category:'winter boots' AND (color:black OR color:brown) AND AND:2
+Error: Error in Ln: 1 Col: 65
+category:'winter boots' AND (color:black OR color:brown) AND AND:2
+                                                                ^
+Expecting: any char not in ‘ "():’
+Other error messages:
+  Cannot use reserved word 'AND' as identifier
+
+
+
+Parsing query: category:'winter boots' AND (OR:black OR color:brown) AND AND:2
+Error: Error in Ln: 1 Col: 29
+category:'winter boots' AND (OR:black OR color:brown) AND AND:2
+                            ^
+Expecting: primary expression
+
+

@@ -1,0 +1,143 @@
+
+Parsing query: "red shoes" OR ((blue OR purple) AND sneakers)
+SearchQuery(expression=Or(left=Term(value='red shoes'), right=And(left=Or(left=Term(value='blue'), right=Term(value='purple')), right=Term(value='sneakers'))))
+Parsed expression: ("red shoes" OR ((blue OR purple) AND sneakers))
+
+Parsing query: comfortable AND (leather OR suede)
+SearchQuery(expression=And(left=Term(value='comfortable'), right=Or(left=Term(value='leather'), right=Term(value='suede'))))
+Parsed expression: (comfortable AND (leather OR suede))
+
+Parsing query: (winter OR summer) AND boots
+SearchQuery(expression=And(left=Or(left=Term(value='winter'), right=Term(value='summer')), right=Term(value='boots')))
+Parsed expression: ((winter OR summer) AND boots)
+
+Parsing query: boots summer
+SearchQuery(expression=And(left=Term(value='boots'), right=Term(value='summer')))
+Parsed expression: (boots AND summer)
+
+Parsing query: color:red AND size:large
+Syntax error at ':'
+Syntax error at ':'
+SearchQuery(expression=Term(value='large'))
+Parsed expression: large
+
+Parsing query: category:"winter boots" AND (color:black OR color:brown)
+Syntax error at ':'
+Syntax error at ':'
+Syntax error at ':'
+SearchQuery(expression=None)
+
+Parsing query: winter boots color:blue
+Syntax error at ':'
+SearchQuery(expression=Term(value='blue'))
+Parsed expression: blue
+
+Parsing query: red boots black
+SearchQuery(expression=And(left=Term(value='red'), right=And(left=Term(value='boots'), right=Term(value='black'))))
+Parsed expression: (red AND (boots AND black))
+
+Parsing query: red (boots black)
+SearchQuery(expression=And(left=Term(value='red'), right=And(left=Term(value='boots'), right=Term(value='black'))))
+Parsed expression: (red AND (boots AND black))
+
+Parsing query: AND:value
+Syntax error at 'AND'
+SearchQuery(expression=Term(value='value'))
+Parsed expression: value
+
+Parsing query: OR:test
+Syntax error at 'OR'
+SearchQuery(expression=Term(value='test'))
+Parsed expression: test
+
+Parsing query: brand:"Nike\Air"
+Syntax error at ':'
+SearchQuery(expression=Term(value='Nike\\Air'))
+Parsed expression: Nike\Air
+
+Parsing query: brand:"Nike"Air"
+Syntax error at ':'
+Illegal character '"'
+Error parsing query: Scanning error. Illegal character '"'
+
+Parsing query: brand:"Nike\"Air"
+Syntax error at ':'
+SearchQuery(expression=Term(value='Nike"Air'))
+Parsed expression: Nike"Air
+
+Parsing query: field: value
+Syntax error at ':'
+SearchQuery(expression=Term(value='value'))
+Parsed expression: value
+
+Parsing query: field :value
+Syntax error at ':'
+SearchQuery(expression=Term(value='value'))
+Parsed expression: value
+
+Parsing query: field : value
+Syntax error at ':'
+SearchQuery(expression=Term(value='value'))
+Parsed expression: value
+
+Parsing query: a AND b OR c
+SearchQuery(expression=Or(left=And(left=Term(value='a'), right=Term(value='b')), right=Term(value='c')))
+Parsed expression: ((a AND b) OR c)
+
+Parsing query: a OR b AND c
+SearchQuery(expression=Or(left=Term(value='a'), right=And(left=Term(value='b'), right=Term(value='c'))))
+Parsed expression: (a OR (b AND c))
+
+Parsing query: a OR b OR c AND d
+SearchQuery(expression=Or(left=Or(left=Term(value='a'), right=Term(value='b')), right=And(left=Term(value='c'), right=Term(value='d'))))
+Parsed expression: ((a OR b) OR (c AND d))
+
+Parsing query: 
+SearchQuery(expression=None)
+
+Parsing query: ()
+Syntax error at ')'
+SearchQuery(expression=None)
+
+Parsing query: field:
+Syntax error at ':'
+SearchQuery(expression=None)
+
+Parsing query: :value
+Syntax error at ':'
+SearchQuery(expression=Term(value='value'))
+Parsed expression: value
+
+Parsing query: (a OR b) c d
+SearchQuery(expression=And(left=Or(left=Term(value='a'), right=Term(value='b')), right=And(left=Term(value='c'), right=Term(value='d'))))
+Parsed expression: ((a OR b) AND (c AND d))
+
+Parsing query: a AND (b OR c) AND d
+SearchQuery(expression=And(left=And(left=Term(value='a'), right=Or(left=Term(value='b'), right=Term(value='c'))), right=Term(value='d')))
+Parsed expression: ((a AND (b OR c)) AND d)
+
+Parsing query: ((a AND b) OR c) AND d
+SearchQuery(expression=And(left=Or(left=And(left=Term(value='a'), right=Term(value='b')), right=Term(value='c')), right=Term(value='d')))
+Parsed expression: (((a AND b) OR c) AND d)
+
+Parsing query: status:"pending review"
+Syntax error at ':'
+SearchQuery(expression=Term(value='pending review'))
+Parsed expression: "pending review"
+
+Parsing query: category:pending review
+Syntax error at ':'
+SearchQuery(expression=And(left=Term(value='pending'), right=Term(value='review')))
+Parsed expression: (pending AND review)
+
+Parsing query: size:large color:red status:available
+Syntax error at ':'
+SearchQuery(expression=Term(value='available'))
+Parsed expression: available
+
+Parsing query: category:"winter boots" AND (color:black OR color:brown) AND size:12
+Syntax error at ':'
+Syntax error at ':'
+Syntax error at ':'
+SearchQuery(expression=Term(value='12'))
+Parsed expression: 12

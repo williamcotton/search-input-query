@@ -328,7 +328,6 @@ const parsePrimary = (
       throw { message: 'Unexpected ")"', position: token.position, length: token.length };
 
     default:
-      console.log('Unexpected token:', token);
       throw { message: 'Unexpected token', position: token.position, length: token.length };
   }
 };
@@ -431,72 +430,74 @@ const parseSearchQuery = (input: string): SearchQuery | SearchQueryError => {
   }
 };
 
-// Test the parser with various queries
-const testQueries = [
-  '"red shoes" OR ((blue OR purple) AND sneakers)',
-  "comfortable AND (leather OR suede)",
-  "(winter OR summer) AND boots",
-  "boots summer",
-  "color:red AND size:large",
-  'category:"winter boots" AND (color:black OR color:brown)',
-  "winter boots color:blue",
-  "red boots black",
-  "red (boots black)",
-  "AND:value",
-  "OR:test",
-  'brand:"Nike\\Air"',
-  'brand:"Nike"Air"',
-  'brand:"Nike\\"Air"',
-  "field: value",
-  "field :value",
-  "field : value",
-  "a AND b OR c",
-  "a OR b AND c",
-  "a OR b OR c AND d",
-  "",
-  "()",
-  "field:",
-  ":value",
-  "(a OR b) c d",
-  "a AND (b OR c) AND d",
-  "((a AND b) OR c) AND d",
-  'status:"pending review"',
-  "category:pending review",
-  "size:large color:red status:available",
-  'category:"winter boots" AND (color:black OR color:brown) AND size:12',
-  'category:"winter boots" AND (color:black OR color:brown) AND AND:2',
-  'category:"winter boots" AND (OR:black OR color:brown) AND AND:2' 
-];
+// // Test the parser with various queries
+// const testQueries = [
+//   '"red shoes" OR ((blue OR purple) AND sneakers)',
+//   "comfortable AND (leather OR suede)",
+//   "(winter OR summer) AND boots",
+//   "boots summer",
+//   "color:red AND size:large",
+//   'category:"winter boots" AND (color:black OR color:brown)',
+//   "winter boots color:blue",
+//   "red boots black",
+//   "red (boots black)",
+//   "AND:value",
+//   "OR:test",
+//   'brand:"Nike\\Air"',
+//   'brand:"Nike"Air"',
+//   'brand:"Nike\\"Air"',
+//   "field: value",
+//   "field :value",
+//   "field : value",
+//   "a AND b OR c",
+//   "a OR b AND c",
+//   "a OR b OR c AND d",
+//   "",
+//   "()",
+//   "field:",
+//   ":value",
+//   "(a OR b) c d",
+//   "a AND (b OR c) AND d",
+//   "((a AND b) OR c) AND d",
+//   'status:"pending review"',
+//   "category:pending review",
+//   "size:large color:red status:available",
+//   'category:"winter boots" AND (color:black OR color:brown) AND size:12',
+//   'category:"winter boots" AND (color:black OR color:brown) AND AND:2',
+//   'category:"winter boots" AND (OR:black OR color:brown) AND AND:2' 
+// ];
 
-for (const query of testQueries) {
-  console.log("\n");
-  console.log(query);
-  try {
-    const result = parseSearchQuery(query);
-    console.log(result);
-    switch (result.type) {
-    case "SEARCH_QUERY":
-      if (result.expression) {
-        console.log("Stringified:", stringify(result.expression));
-      }
-      break;
-    case "SEARCH_QUERY_ERROR":
-      const errorPosition = result.position || 0;
-      const errorLength = result.length || 1;
-      const errorLine = query.split("\n")[0];
-      console.log(errorLine);
-      console.log(" ".repeat(errorPosition) + "^".repeat(errorLength));
+// for (const query of testQueries) {
+//   console.log("\n");
+//   console.log(query);
+//   try {
+//     const result = parseSearchQuery(query);
+//     console.log(result);
+//     switch (result.type) {
+//     case "SEARCH_QUERY":
+//       if (result.expression) {
+//         console.log("Stringified:", stringify(result.expression));
+//       }
+//       break;
+//     case "SEARCH_QUERY_ERROR":
+//       const errorPosition = result.position || 0;
+//       const errorLength = result.length || 1;
+//       const errorLine = query.split("\n")[0];
+//       console.log(errorLine);
+//       console.log(" ".repeat(errorPosition) + "^".repeat(errorLength));
 
-      console.log("Error:", result.error);
-      break;
-    }
-  } catch (error) {
-    console.error(error);
-  }
-}
+//       console.log("Error:", result.error);
+//       break;
+//     }
+//   } catch (error) {
+//     console.error(error);
+//   }
+// }
 
 export {
   parseSearchQuery,
+  stringify,
+  type SearchQueryError,
   type SearchQuery,
   type Expression,
   type SearchTerm,

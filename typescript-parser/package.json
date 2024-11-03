@@ -1,0 +1,20 @@
+{
+  "name": "typescript-parser",
+  "version": "1.0.0",
+  "main": "typescript-search-string-parser.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5"
+  }
+}

@@ -1,0 +1,609 @@
+
+
+"red shoes" OR ((blue OR purple) AND sneakers)
+{
+  type: 'SEARCH_QUERY',
+  expression: {
+    type: 'OR',
+    left: { type: 'TERM', value: 'red shoes', position: 0, length: 11 },
+    right: {
+      type: 'AND',
+      left: [Object],
+      right: [Object],
+      position: 33,
+      length: 3
+    },
+    position: 12,
+    length: 2
+  }
+}
+Stringified: ("red shoes" OR ((blue OR purple) AND sneakers))
+
+
+comfortable AND (leather OR suede)
+{
+  type: 'SEARCH_QUERY',
+  expression: {
+    type: 'AND',
+    left: { type: 'TERM', value: 'comfortable', position: 0, length: 11 },
+    right: {
+      type: 'OR',
+      left: [Object],
+      right: [Object],
+      position: 25,
+      length: 2
+    },
+    position: 12,
+    length: 3
+  }
+}
+Stringified: (comfortable AND (leather OR suede))
+
+
+(winter OR summer) AND boots
+{
+  type: 'SEARCH_QUERY',
+  expression: {
+    type: 'AND',
+    left: {
+      type: 'OR',
+      left: [Object],
+      right: [Object],
+      position: 8,
+      length: 2
+    },
+    right: { type: 'TERM', value: 'boots', position: 23, length: 5 },
+    position: 19,
+    length: 3
+  }
+}
+Stringified: ((winter OR summer) AND boots)
+
+
+boots summer
+{
+  type: 'SEARCH_QUERY',
+  expression: {
+    type: 'AND',
+    left: { type: 'TERM', value: 'boots', position: 0, length: 5 },
+    right: { type: 'TERM', value: 'summer', position: 6, length: 6 },
+    position: 6,
+    length: 6
+  }
+}
+Stringified: (boots AND summer)
+
+
+color:red AND size:large
+{
+  type: 'SEARCH_QUERY',
+  expression: {
+    type: 'AND',
+    left: {
+      type: 'FIELD',
+      key: 'color',
+      value: 'red',
+      keyPosition: 0,
+      keyLength: 5,
+      valuePosition: 6,
+      valueLength: 3
+    },
+    right: {
+      type: 'FIELD',
+      key: 'size',
+      value: 'large',
+      keyPosition: 14,
+      keyLength: 4,
+      valuePosition: 19,
+      valueLength: 5
+    },
+    position: 10,
+    length: 3
+  }
+}
+Stringified: (color:red AND size:large)
+
+
+category:"winter boots" AND (color:black OR color:brown)
+{
+  type: 'SEARCH_QUERY',
+  expression: {
+    type: 'AND',
+    left: {
+      type: 'FIELD',
+      key: 'category',
+      value: 'winter boots',
+      keyPosition: 0,
+      keyLength: 8,
+      valuePosition: 9,
+      valueLength: 14
+    },
+    right: {
+      type: 'OR',
+      left: [Object],
+      right: [Object],
+      position: 41,
+      length: 2
+    },
+    position: 24,
+    length: 3
+  }
+}
+Stringified: (category:winter boots AND (color:black OR color:brown))
+
+
+winter boots color:blue
+{
+  type: 'SEARCH_QUERY',
+  expression: {
+    type: 'AND',
+    left: {
+      type: 'AND',
+      left: [Object],
+      right: [Object],
+      position: 7,
+      length: 5
+    },
+    right: {
+      type: 'FIELD',
+      key: 'color',
+      value: 'blue',
+      keyPosition: 13,
+      keyLength: 5,
+      valuePosition: 19,
+      valueLength: 4
+    },
+    position: 13,
+    length: 5
+  }
+}
+Stringified: ((winter AND boots) AND color:blue)
+
+
+red boots black
+{
+  type: 'SEARCH_QUERY',
+  expression: {
+    type: 'AND',
+    left: {
+      type: 'AND',
+      left: [Object],
+      right: [Object],
+      position: 4,
+      length: 5
+    },
+    right: { type: 'TERM', value: 'black', position: 10, length: 5 },
+    position: 10,
+    length: 5
+  }
+}
+Stringified: ((red AND boots) AND black)
+
+
+red (boots black)
+{
+  type: 'SEARCH_QUERY',
+  expression: {
+    type: 'AND',
+    left: { type: 'TERM', value: 'red', position: 0, length: 3 },
+    right: {
+      type: 'AND',
+      left: [Object],
+      right: [Object],
+      position: 11,
+      length: 5
+    },
+    position: 4,
+    length: 1
+  }
+}
+Stringified: (red AND (boots AND black))
+
+
+AND:value
+{
+  type: 'SEARCH_QUERY_ERROR',
+  expression: null,
+  error: 'AND is a reserved word',
+  position: 0,
+  length: 3
+}
+AND:value
+^^^
+Error: AND is a reserved word
+
+
+OR:test
+{
+  type: 'SEARCH_QUERY_ERROR',
+  expression: null,
+  error: 'OR is a reserved word',
+  position: 0,
+  length: 2
+}
+OR:test
+^^
+Error: OR is a reserved word
+
+
+brand:"Nike\Air"
+{
+  type: 'SEARCH_QUERY',
+  expression: {
+    type: 'FIELD',
+    key: 'brand',
+    value: 'NikeAir',
+    keyPosition: 0,
+    keyLength: 5,
+    valuePosition: 6,
+    valueLength: 10
+  }
+}
+Stringified: brand:NikeAir
+
+
+brand:"Nike"Air"
+{
+  type: 'SEARCH_QUERY_ERROR',
+  expression: null,
+  error: 'Unterminated quoted string',
+  position: 15,
+  length: 2
+}
+brand:"Nike"Air"
+               ^^
+Error: Unterminated quoted string
+
+
+brand:"Nike\"Air"
+{
+  type: 'SEARCH_QUERY',
+  expression: {
+    type: 'FIELD',
+    key: 'brand',
+    value: 'Nike"Air',
+    keyPosition: 0,
+    keyLength: 5,
+    valuePosition: 6,
+    valueLength: 11
+  }
+}
+Stringified: brand:Nike"Air
+
+
+field: value
+{
+  type: 'SEARCH_QUERY',
+  expression: {
+    type: 'FIELD',
+    key: 'field',
+    value: 'value',
+    keyPosition: 0,
+    keyLength: 5,
+    valuePosition: 7,
+    valueLength: 5
+  }
+}
+Stringified: field:value
+
+
+field :value
+{
+  type: 'SEARCH_QUERY',
+  expression: {
+    type: 'FIELD',
+    key: 'field',
+    value: 'value',
+    keyPosition: 0,
+    keyLength: 5,
+    valuePosition: 7,
+    valueLength: 5
+  }
+}
+Stringified: field:value
+
+
+field : value
+{
+  type: 'SEARCH_QUERY',
+  expression: {
+    type: 'FIELD',
+    key: 'field',
+    value: 'value',
+    keyPosition: 0,
+    keyLength: 5,
+    valuePosition: 8,
+    valueLength: 5
+  }
+}
+Stringified: field:value
+
+
+a AND b OR c
+{
+  type: 'SEARCH_QUERY',
+  expression: {
+    type: 'OR',
+    left: {
+      type: 'AND',
+      left: [Object],
+      right: [Object],
+      position: 2,
+      length: 3
+    },
+    right: { type: 'TERM', value: 'c', position: 11, length: 1 },
+    position: 8,
+    length: 2
+  }
+}
+Stringified: ((a AND b) OR c)
+
+
+a OR b AND c
+{
+  type: 'SEARCH_QUERY',
+  expression: {
+    type: 'OR',
+    left: { type: 'TERM', value: 'a', position: 0, length: 1 },
+    right: {
+      type: 'AND',
+      left: [Object],
+      right: [Object],
+      position: 7,
+      length: 3
+    },
+    position: 2,
+    length: 2
+  }
+}
+Stringified: (a OR (b AND c))
+
+
+a OR b OR c AND d
+{
+  type: 'SEARCH_QUERY',
+  expression: {
+    type: 'OR',
+    left: {
+      type: 'OR',
+      left: [Object],
+      right: [Object],
+      position: 2,
+      length: 2
+    },
+    right: {
+      type: 'AND',
+      left: [Object],
+      right: [Object],
+      position: 12,
+      length: 3
+    },
+    position: 7,
+    length: 2
+  }
+}
+Stringified: ((a OR b) OR (c AND d))
+
+
+
+{ type: 'SEARCH_QUERY', expression: null }
+
+
+()
+{
+  type: 'SEARCH_QUERY_ERROR',
+  expression: null,
+  error: 'Unexpected ")"',
+  position: 1,
+  length: 1
+}
+()
+ ^
+Error: Unexpected ")"
+
+
+field:
+{
+  type: 'SEARCH_QUERY_ERROR',
+  expression: null,
+  error: 'Expected field value',
+  position: 0,
+  length: 5
+}
+field:
+^^^^^
+Error: Expected field value
+
+
+:value
+Unexpected token: { type: 'COLON', value: ':', position: 0, length: 1 }
+{
+  type: 'SEARCH_QUERY_ERROR',
+  expression: null,
+  error: 'Unexpected token',
+  position: 0,
+  length: 1
+}
+:value
+^
+Error: Unexpected token
+
+
+(a OR b) c d
+{
+  type: 'SEARCH_QUERY',
+  expression: {
+    type: 'AND',
+    left: {
+      type: 'AND',
+      left: [Object],
+      right: [Object],
+      position: 9,
+      length: 1
+    },
+    right: { type: 'TERM', value: 'd', position: 11, length: 1 },
+    position: 11,
+    length: 1
+  }
+}
+Stringified: (((a OR b) AND c) AND d)
+
+
+a AND (b OR c) AND d
+{
+  type: 'SEARCH_QUERY',
+  expression: {
+    type: 'AND',
+    left: {
+      type: 'AND',
+      left: [Object],
+      right: [Object],
+      position: 2,
+      length: 3
+    },
+    right: { type: 'TERM', value: 'd', position: 19, length: 1 },
+    position: 15,
+    length: 3
+  }
+}
+Stringified: ((a AND (b OR c)) AND d)
+
+
+((a AND b) OR c) AND d
+{
+  type: 'SEARCH_QUERY',
+  expression: {
+    type: 'AND',
+    left: {
+      type: 'OR',
+      left: [Object],
+      right: [Object],
+      position: 11,
+      length: 2
+    },
+    right: { type: 'TERM', value: 'd', position: 21, length: 1 },
+    position: 17,
+    length: 3
+  }
+}
+Stringified: (((a AND b) OR c) AND d)
+
+
+status:"pending review"
+{
+  type: 'SEARCH_QUERY',
+  expression: {
+    type: 'FIELD',
+    key: 'status',
+    value: 'pending review',
+    keyPosition: 0,
+    keyLength: 6,
+    valuePosition: 7,
+    valueLength: 16
+  }
+}
+Stringified: status:pending review
+
+
+category:pending review
+{
+  type: 'SEARCH_QUERY',
+  expression: {
+    type: 'AND',
+    left: {
+      type: 'FIELD',
+      key: 'category',
+      value: 'pending',
+      keyPosition: 0,
+      keyLength: 8,
+      valuePosition: 9,
+      valueLength: 7
+    },
+    right: { type: 'TERM', value: 'review', position: 17, length: 6 },
+    position: 17,
+    length: 6
+  }
+}
+Stringified: (category:pending AND review)
+
+
+size:large color:red status:available
+{
+  type: 'SEARCH_QUERY',
+  expression: {
+    type: 'AND',
+    left: {
+      type: 'AND',
+      left: [Object],
+      right: [Object],
+      position: 11,
+      length: 5
+    },
+    right: {
+      type: 'FIELD',
+      key: 'status',
+      value: 'available',
+      keyPosition: 21,
+      keyLength: 6,
+      valuePosition: 28,
+      valueLength: 9
+    },
+    position: 21,
+    length: 6
+  }
+}
+Stringified: ((size:large AND color:red) AND status:available)
+
+
+category:"winter boots" AND (color:black OR color:brown) AND size:12
+{
+  type: 'SEARCH_QUERY',
+  expression: {
+    type: 'AND',
+    left: {
+      type: 'AND',
+      left: [Object],
+      right: [Object],
+      position: 24,
+      length: 3
+    },
+    right: {
+      type: 'FIELD',
+      key: 'size',
+      value: '12',
+      keyPosition: 61,
+      keyLength: 4,
+      valuePosition: 66,
+      valueLength: 2
+    },
+    position: 57,
+    length: 3
+  }
+}
+Stringified: ((category:winter boots AND (color:black OR color:brown)) AND size:12)
+
+
+category:"winter boots" AND (color:black OR color:brown) AND AND:2
+{
+  type: 'SEARCH_QUERY_ERROR',
+  expression: null,
+  error: 'AND is a reserved word',
+  position: 61,
+  length: 3
+}
+category:"winter boots" AND (color:black OR color:brown) AND AND:2
+                                                             ^^^
+Error: AND is a reserved word
+
+
+category:"winter boots" AND (OR:black OR color:brown) AND AND:2
+{
+  type: 'SEARCH_QUERY_ERROR',
+  expression: null,
+  error: 'OR is a reserved word',
+  position: 29,
+  length: 2
+}
+category:"winter boots" AND (OR:black OR color:brown) AND AND:2
+                             ^^
+Error: OR is a reserved word

@@ -1,0 +1,40 @@
+
+Search query: comfortable AND (leather OR suede) brand:nike
+Valid query: {
+  isValid: false,
+  errors: [
+    {
+      field: 'brand',
+      message: 'Invalid field: "brand". Allowed fields are: color, category, date'
+    }
+  ]
+}
+
+Search query: category:"winter boots" AND (color:black OR color:brown)
+Valid query: { isValid: true, errors: [] }
+SQL: (category ILIKE $1 AND (color ILIKE $2 OR color ILIKE $3))
+Values: [ '%winter boots%', '%black%', '%brown%' ]
+
+Search query: red boots color:blue date:2024-01-01
+Valid query: { isValid: true, errors: [] }
+SQL: ((((title ILIKE $1 OR description ILIKE $1 OR content ILIKE $1 OR name ILIKE $1) AND (title ILIKE $2 OR description ILIKE $2 OR content ILIKE $2 OR name ILIKE $2)) AND color ILIKE $3) AND date::date = $4::date)
+Values: [ '%red%', '%boots%', '%blue%', '2024-01-01' ]
+
+Search query: winter boots ((user_id:123 OR admin_id:456) AND status:active)
+Valid query: {
+  isValid: false,
+  errors: [
+    {
+      field: 'user_id',
+      message: 'Invalid field: "user_id". Allowed fields are: color, category, date'
+    },
+    {
+      field: 'admin_id',
+      message: 'Invalid field: "admin_id". Allowed fields are: color, category, date'
+    },
+    {
+      field: 'status',
+      message: 'Invalid field: "status". Allowed fields are: color, category, date'
+    }
+  ]
+}

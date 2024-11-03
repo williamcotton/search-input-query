@@ -21,12 +21,12 @@ interface TokenStream {
   readonly position: number;
 }
 
+// First Pass AST types (from tokenizer/parser)
 type PositionLength = {
   position: number;
   length: number;
 };
 
-// AST types
 type StringLiteral = {
   readonly type: "STRING";
   readonly value: string;
@@ -34,17 +34,47 @@ type StringLiteral = {
 
 type AndExpression = {
   readonly type: "AND";
+  readonly left: FirstPassExpression;
+  readonly right: FirstPassExpression;
+} & PositionLength;
+
+type OrExpression = {
+  readonly type: "OR";
+  readonly left: FirstPassExpression;
+  readonly right: FirstPassExpression;
+} & PositionLength;
+
+type FirstPassExpression = StringLiteral | AndExpression | OrExpression;
+
+// Second Pass AST types (semantic analysis)
+type SearchTerm = {
+  readonly type: "SEARCH_TERM";
+  readonly value: string;
+} & PositionLength;
+
+type FieldValue = {
+  readonly type: "FIELD_VALUE";
+  readonly field: string;
+  readonly value: string;
+  readonly fieldPosition: number;
+  readonly fieldLength: number;
+  readonly valuePosition: number;
+  readonly valueLength: number;
+} 
+
+type And = {
+  readonly type: "AND";
   readonly left: Expression;
   readonly right: Expression;
 } & PositionLength;
 
-type OrExpression = {
+type Or = {
   readonly type: "OR";
   readonly left: Expression;
   readonly right: Expression;
 } & PositionLength;
 
-type Expression = StringLiteral | AndExpression | OrExpression;
+type Expression = SearchTerm | FieldValue | And | Or;
 
 type SearchQuery = {
   readonly type: "SEARCH_QUERY";
@@ -277,7 +307,7 @@ const expectToken = (stream: TokenStream, type: TokenType): TokenStream => {
   return advanceStream(stream);
 };
 
-const parsePrimary = (stream: TokenStream): ParseResult<Expression> => {
+const parsePrimary = (stream: TokenStream): ParseResult<FirstPassExpression> => {
   const token = currentToken(stream);
 
   switch (token.type) {
@@ -324,7 +354,7 @@ const getOperatorPrecedence = (type: TokenType): number =>
 const parseExpression = (
   stream: TokenStream,
   minPrecedence: number = 0
-): ParseResult<Expression> => {
+): ParseResult<FirstPassExpression> => {
   let result = parsePrimary(stream);
 
   while (true) {
@@ -385,8 +415,10 @@ const parseExpression = (
 // Helper function to stringify expressions
 const stringify = (expr: Expression): string => {
   switch (expr.type) {
-    case "STRING":
-      return expr.value.includes(" ") ? `"${expr.value}"` : expr.value;
+    case "SEARCH_TERM":
+      return expr.value;
+    case "FIELD_VALUE":
+      return `${expr.field}:${expr.value}`;
     case "AND":
       return `(${stringify(expr.left)} AND ${stringify(expr.right)})`;
     case "OR":
@@ -448,7 +480,7 @@ const validateString = (expr: StringLiteral, errors: ValidationError[]) => {
 
 };
 
-const walkExpression = (expr: Expression, errors: ValidationError[]) => {
+const walkExpression = (expr: FirstPassExpression, errors: ValidationError[]) => {
   switch (expr.type) {
     case "STRING":
       validateString(expr, errors);
@@ -461,18 +493,70 @@ const walkExpression = (expr: Expression, errors: ValidationError[]) => {
   }
 };
 
-const validateSearchQuery = (query: SearchQuery): ValidationError[] => {
+const validateSearchQuery = (expression: FirstPassExpression): ValidationError[] => {
   const errors: ValidationError[] = [];
 
-  if (query.expression === null) {
+  if (expression === null) {
     return errors;
   }
 
-  walkExpression(query.expression, errors);
+  walkExpression(expression, errors);
 
   return errors;
 };
 
+// Helper to transform FirstPassExpression into Expression
+const transformToExpression = (expr: FirstPassExpression): Expression => {
+  switch (expr.type) {
+    case "STRING": {
+      // Check if the string is a field:value pattern
+      const colonIndex = expr.value.indexOf(':');
+      if (colonIndex !== -1) {
+        const field = expr.value.substring(0, colonIndex).trim();
+        const value = expr.value.substring(colonIndex + 1).trim();
+        // Remove quotes if present
+        const cleanValue = value.startsWith('"') && value.endsWith('"') 
+          ? value.slice(1, -1)
+          : value;
+
+        return {
+          type: "FIELD_VALUE",
+          field,
+          value: cleanValue,
+          fieldPosition: expr.position,
+          fieldLength: colonIndex,
+          valuePosition: expr.position + colonIndex + 1,
+          valueLength: value.length
+        };
+      }
+      
+      return {
+        type: "SEARCH_TERM",
+        value: expr.value,
+        position: expr.position,
+        length: expr.length
+      };
+    }
+
+    case "AND":
+      return {
+        type: "AND",
+        left: transformToExpression(expr.left),
+        right: transformToExpression(expr.right),
+        position: expr.position,
+        length: expr.length
+      };
+
+    case "OR":
+      return {
+        type: "OR",
+        left: transformToExpression(expr.left),
+        right: transformToExpression(expr.right),
+        position: expr.position,
+        length: expr.length
+      };
+  }
+};
 
 // Main parse function
 const parseSearchQuery = (input: string): SearchQuery | SearchQueryError => {
@@ -495,7 +579,7 @@ const parseSearchQuery = (input: string): SearchQuery | SearchQueryError => {
       };
     }
 
-    const errors = validateSearchQuery({ type: "SEARCH_QUERY", expression: result.result });
+    const errors = validateSearchQuery(result.result);
 
     console.log(errors);
 
@@ -508,7 +592,10 @@ const parseSearchQuery = (input: string): SearchQuery | SearchQueryError => {
         length: errors[0].length,
       };
     }
-    return { type: "SEARCH_QUERY", expression: result.result };
+
+    const expression = transformToExpression(result.result);
+
+    return { type: "SEARCH_QUERY", expression };
   } catch (error: any) {
     return {
       type: "SEARCH_QUERY_ERROR",

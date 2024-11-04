@@ -40,7 +40,7 @@ type SearchQuery = {
 type SearchQueryError = {
   readonly type: "SEARCH_QUERY_ERROR";
   readonly expression: null;
-  readonly errors?: ValidationError[];
+  readonly errors: ValidationError[];
 };
 
 // Helper function to stringify expressions

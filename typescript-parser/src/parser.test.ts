@@ -6,7 +6,7 @@ import {
   type SearchQueryError,
   stringify,
   ValidationError,
-} from "./typescript-first-pass-parser";
+} from "./parser";
 
 describe("Search Query Parser", () => {
   const testValidQuery = (input: string, expected: string) => {

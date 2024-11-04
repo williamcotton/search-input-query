@@ -601,7 +601,6 @@ const transformToExpression = (expr: FirstPassExpression): Expression => {
 const parseSearchQuery = (input: string): SearchQuery | SearchQueryError => {
   try {
     const tokens = tokenize(input);
-    console.log(tokens);
     const stream = createStream(tokens);
 
     if (currentToken(stream).type === TokenType.EOF) {
@@ -609,7 +608,6 @@ const parseSearchQuery = (input: string): SearchQuery | SearchQueryError => {
     }
 
     const result = parseExpression(stream);
-    console.log(result);
 
     const finalToken = currentToken(result.stream);
     if (finalToken.type !== TokenType.EOF) {
@@ -653,54 +651,3 @@ export {
   type OrExpression,
   type ValidationError,
 };
-
-// Test cases
-const testQueries = [
-  '"red shoes" OR ((blue OR purple) AND sneakers)',
-  "comfortable AND (leather OR suede)",
-  "(winter OR summer) AND boots",
-  "boots summer",
-  "color:red AND size:large",
-  'category:"winter boots" AND (color:black OR color:brown)',
-  "winter boots color:blue",
-  "red boots black",
-  "red (boots black)",
-  "AND:value",
-  "OR:test",
-  'brand:"Nike\\Air"',
-  'brand:"Nike"Air"',
-  'brand:"Nike\\"Air"',
-  "a AND b OR c",
-  "a OR b AND c",
-  "a OR b OR c AND d",
-  "",
-  "()",
-  "(a OR b) c d",
-  "a AND (b OR c) AND d",
-  "((a AND b) OR c) AND d",
-  'status:"pending review"',
-  "category:pending review",
-  "size:large color:red status:available",
-  'category:"winter boots" AND (color:black OR color:brown) AND size:12',
-  "AND OR AND",
-  "field: value",
-  "field :value",
-  "field : value",
-  "field:value",
-  "field:",
-  ":value",
-  'category:"winter boots" AND (value: OR color:) AND size:',
-];
-
-for (const query of testQueries) {
-  console.log("\nParsing query:", query);
-  try {
-    const result = parseSearchQuery(query);
-    console.log(result);
-    console.log("Parsed expression:", stringify(result.expression!));
-  } catch (error) {
-    if (error instanceof Error) {
-      console.error("Error parsing query:", error.message);
-    }
-  }
-}

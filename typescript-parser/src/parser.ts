@@ -36,7 +36,12 @@ type Or = {
   readonly right: Expression;
 } & PositionLength;
 
-type Expression = SearchTerm | FieldValue | And | Or;
+type Not = {
+  readonly type: "NOT";
+  readonly expression: Expression;
+} & PositionLength;
+
+type Expression = SearchTerm | FieldValue | And | Or | Not;
 
 type SearchQuery = {
   readonly type: "SEARCH_QUERY";
@@ -56,6 +61,8 @@ const stringify = (expr: Expression): string => {
       return expr.value.includes(" ") ? `"${expr.value}"` : expr.value;
     case "FIELD_VALUE":
       return `${expr.field.value}:${expr.value.value}`;
+    case "NOT":
+      return `NOT (${stringify(expr.expression)})`;
     case "AND":
       return `(${stringify(expr.left)} AND ${stringify(expr.right)})`;
     case "OR":
@@ -66,16 +73,25 @@ const stringify = (expr: Expression): string => {
 // Helper to transform FirstPassExpression into Expression
 const transformToExpression = (expr: FirstPassExpression): Expression => {
   switch (expr.type) {
+    case "NOT":
+      return {
+        type: "NOT",
+        expression: transformToExpression(expr.expression),
+        position: expr.position,
+        length: expr.length,
+      };
+
     case "STRING": {
       // Check if the string is a field:value pattern
-      const colonIndex = expr.value.indexOf(':');
+      const colonIndex = expr.value.indexOf(":");
       if (colonIndex !== -1) {
         const field = expr.value.substring(0, colonIndex).trim();
         const value = expr.value.substring(colonIndex + 1).trim();
         // Remove quotes if present
-        const cleanValue = value.startsWith('"') && value.endsWith('"') 
-          ? value.slice(1, -1)
-          : value;
+        const cleanValue =
+          value.startsWith('"') && value.endsWith('"')
+            ? value.slice(1, -1)
+            : value;
 
         return {
           type: "FIELD_VALUE",
@@ -83,22 +99,22 @@ const transformToExpression = (expr: FirstPassExpression): Expression => {
             type: "FIELD",
             value: field,
             position: expr.position,
-            length: colonIndex
+            length: colonIndex,
           },
           value: {
             type: "VALUE",
             value: cleanValue,
             position: expr.position + colonIndex + 1,
-            length: value.length
-          }
+            length: value.length,
+          },
         };
       }
-      
+
       return {
         type: "SEARCH_TERM",
         value: expr.value,
         position: expr.position,
-        length: expr.length
+        length: expr.length,
       };
     }
 
@@ -108,7 +124,7 @@ const transformToExpression = (expr: FirstPassExpression): Expression => {
         left: transformToExpression(expr.left),
         right: transformToExpression(expr.right),
         position: expr.position,
-        length: expr.length
+        length: expr.length,
       };
 
     case "OR":
@@ -117,7 +133,7 @@ const transformToExpression = (expr: FirstPassExpression): Expression => {
         left: transformToExpression(expr.left),
         right: transformToExpression(expr.right),
         position: expr.position,
-        length: expr.length
+        length: expr.length,
       };
   }
 };

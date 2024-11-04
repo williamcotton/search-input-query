@@ -150,6 +150,9 @@ const expressionToSql = (
       return searchTermToSql(expr.value, state);
     case "FIELD_VALUE":
       return fieldValueToSql(expr.field.value, expr.value.value, state);
+    case "NOT":
+      const [innerText, innerState] = expressionToSql(expr.expression, state);
+      return [`NOT (${innerText})`, innerState];
     case "AND":
       return binaryOpToSql("AND", expr.left, expr.right, state);
     case "OR":

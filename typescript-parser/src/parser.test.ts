@@ -138,6 +138,33 @@ describe("Search Query Parser", () => {
     });
   });
 
+  describe("NOT Expression Support", () => {
+    test("parses simple NOT expressions", () => {
+      testValidQuery("NOT test", "NOT (test)");
+    });
+
+    test("parses NOT with parentheses", () => {
+      testValidQuery("NOT (test)", "NOT (test)");
+    });
+
+    test("parses NOT with field:value", () => {
+      testValidQuery("NOT status:active", "NOT (status:active)");
+    });
+
+    test("parses NOT with quoted strings", () => {
+      testValidQuery('NOT "red shoes"', 'NOT ("red shoes")');
+    });
+
+    test("parses complex expressions with NOT", () => {
+      testValidQuery("boots AND NOT leather", "(boots AND NOT (leather))");
+      testValidQuery("NOT (leather OR suede)", "NOT ((leather OR suede))");
+      testValidQuery(
+        "category:boots AND NOT (color:brown OR color:black)",
+        "(category:boots AND NOT ((color:brown OR color:black)))"
+      );
+    });
+  });
+
   describe("Parentheses Grouping", () => {
     test("parses simple parenthesized expressions", () => {
       testValidQuery(

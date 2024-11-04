@@ -55,6 +55,8 @@ const validateExpressionFields = (
   switch (expr.type) {
     case "FIELD_VALUE":
       return validateFieldValue(expr, allowedColumns);
+    case "NOT":
+      return validateExpressionFields(expr.expression, allowedColumns);
     case "AND":
     case "OR":
       return [

@@ -6,6 +6,7 @@ export enum TokenType {
   RPAREN = "RPAREN",
   AND = "AND",
   OR = "OR",
+  NOT = "NOT",
   EOF = "EOF",
 }
 
@@ -157,10 +158,15 @@ const tokenizeString = (input: string, position: number): [Token, number] => {
   }
 
   // Handle logical operators
-  if (fieldPart === "AND" || fieldPart === "OR") {
+  if (fieldPart === "AND" || fieldPart === "OR" || fieldPart === "NOT") {
     return [
       {
-        type: fieldPart === "AND" ? TokenType.AND : TokenType.OR,
+        type:
+          fieldPart === "AND"
+            ? TokenType.AND
+            : fieldPart === "OR"
+            ? TokenType.OR
+            : TokenType.NOT,
         value: fieldPart,
         position,
         length: fieldPart.length,

@@ -80,6 +80,9 @@ const walkExpression = (
       walkExpression(expr.left, errors);
       walkExpression(expr.right, errors);
       break;
+    case "NOT":
+      walkExpression(expr.expression, errors);
+      break;
   }
 };
 

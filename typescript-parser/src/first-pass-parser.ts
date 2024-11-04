@@ -23,7 +23,12 @@ export type OrExpression = {
   readonly right: FirstPassExpression;
 } & PositionLength;
 
-export type FirstPassExpression = StringLiteral | AndExpression | OrExpression;
+export type NotExpression = {
+  readonly type: "NOT";
+  readonly expression: FirstPassExpression;
+} & PositionLength;
+
+export type FirstPassExpression = StringLiteral | AndExpression | OrExpression | NotExpression;
 
 // Parser functions
 interface ParseResult<T> {
@@ -50,6 +55,20 @@ const parsePrimary = (
   const token = currentToken(stream);
 
   switch (token.type) {
+    case TokenType.NOT: {
+      const nextStream = advanceStream(stream);
+      const exprResult = parsePrimary(nextStream);
+      return {
+        result: {
+          type: "NOT",
+          expression: exprResult.result,
+          position: token.position,
+          length: token.length,
+        },
+        stream: exprResult.stream,
+      };
+    }
+    
     case TokenType.LPAREN: {
       const innerStream = advanceStream(stream);
       const exprResult = parseExpression(innerStream, 0);

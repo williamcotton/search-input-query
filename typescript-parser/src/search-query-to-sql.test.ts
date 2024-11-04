@@ -105,6 +105,36 @@ describe("Search Query to SQL Converter", () => {
     });
   });
 
+  describe("NOT SQL Conversion", () => {
+    test("converts simple NOT expressions", () => {
+      testSqlConversion(
+        "NOT test",
+        "NOT ((title ILIKE $1 OR description ILIKE $1 OR content ILIKE $1))",
+        ["%test%"]
+      );
+    });
+
+    test("converts NOT with field:value", () => {
+      testSqlConversion("NOT status:active", "NOT (status ILIKE $1)", [
+        "%active%",
+      ]);
+    });
+
+    test("converts complex NOT expressions", () => {
+      testSqlConversion(
+        "boots AND NOT leather",
+        "((title ILIKE $1 OR description ILIKE $1 OR content ILIKE $1) AND NOT ((title ILIKE $2 OR description ILIKE $2 OR content ILIKE $2)))",
+        ["%boots%", "%leather%"]
+      );
+
+      testSqlConversion(
+        "NOT (color:red OR color:blue)",
+        "NOT ((color ILIKE $1 OR color ILIKE $2))",
+        ["%red%", "%blue%"]
+      );
+    });
+  });
+
   describe("Complex Queries", () => {
     test("converts complex field and term combinations", () => {
       testSqlConversion(

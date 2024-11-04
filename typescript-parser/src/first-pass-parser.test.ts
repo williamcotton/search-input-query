@@ -149,6 +149,79 @@ describe("First Pass Parser", () => {
     });
   });
 
+  describe("NOT Expression Parsing", () => {
+    test("parses simple NOT expressions", () => {
+      const result = parseQuery("NOT test");
+      expect(result).toEqual({
+        type: "NOT",
+        expression: {
+          type: "STRING",
+          value: "test",
+          position: 4,
+          length: 4,
+        },
+        position: 0,
+        length: 3,
+      });
+    });
+
+    test("parses NOT with parentheses", () => {
+      const result = parseQuery("NOT (test)");
+      expect(result).toEqual({
+        type: "NOT",
+        expression: {
+          type: "STRING",
+          value: "test",
+          position: 5,
+          length: 4,
+        },
+        position: 0,
+        length: 3,
+      });
+    });
+
+    test("parses NOT with field:value pairs", () => {
+      const result = parseQuery("NOT status:active");
+      expect(result).toEqual({
+        type: "NOT",
+        expression: {
+          type: "STRING",
+          value: "status:active",
+          position: 4,
+          length: 13,
+        },
+        position: 0,
+        length: 3,
+      });
+    });
+
+    test("parses complex expressions with NOT", () => {
+      const result = parseQuery("boots AND NOT leather");
+      expect(result).toEqual({
+        type: "AND",
+        left: {
+          type: "STRING",
+          value: "boots",
+          position: 0,
+          length: 5,
+        },
+        right: {
+          type: "NOT",
+          expression: {
+            type: "STRING",
+            value: "leather",
+            position: 14,
+            length: 7,
+          },
+          position: 10,
+          length: 3,
+        },
+        position: 6,
+        length: 3,
+      });
+    });
+  });
+
   describe("Parentheses Handling", () => {
     test("parses simple parenthesized expressions", () => {
       const result = parseQuery("(boots)");

@@ -51,6 +51,11 @@ describe("Lexer", () => {
         { type: TokenType.OR, value: "OR", position: 6, length: 2 },
         { type: TokenType.STRING, value: "shoes", position: 9, length: 5 },
       ]);
+
+      expect(tokenize("NOT test")).toEqual([
+        { type: TokenType.NOT, value: "NOT", position: 0, length: 3 },
+        { type: TokenType.STRING, value: "test", position: 4, length: 4 },
+      ]);
     });
   });
 
@@ -205,6 +210,19 @@ describe("Lexer", () => {
           length: 11,
         },
         { type: TokenType.RPAREN, value: ")", position: 55, length: 1 },
+      ]);
+    });
+
+    test("handles nested expressions with multiple operators including NOT", () => {
+      expect(tokenize("NOT (a OR b) AND c")).toEqual([
+        { type: TokenType.NOT, value: "NOT", position: 0, length: 3 },
+        { type: TokenType.LPAREN, value: "(", position: 4, length: 1 },
+        { type: TokenType.STRING, value: "a", position: 5, length: 1 },
+        { type: TokenType.OR, value: "OR", position: 7, length: 2 },
+        { type: TokenType.STRING, value: "b", position: 10, length: 1 },
+        { type: TokenType.RPAREN, value: ")", position: 11, length: 1 },
+        { type: TokenType.AND, value: "AND", position: 13, length: 3 },
+        { type: TokenType.STRING, value: "c", position: 17, length: 1 },
       ]);
     });
 

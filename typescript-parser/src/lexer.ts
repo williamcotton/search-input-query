@@ -200,6 +200,25 @@ export const tokenize = (input: string): Token[] => {
     }
 
     switch (char) {
+      case "-": {
+        // Check if this is the start of a term/expression
+        if (position === 0 || isWhitespace(input[position - 1])) {
+          tokens.push({
+            type: TokenType.NOT,
+            value: "NOT",
+            position,
+            length: 1,
+          });
+          position++;
+        } else {
+          // If minus is not at start of term, treat it as part of the term
+          const [token, newPos] = tokenizeString(input, position);
+          tokens.push(token);
+          position = newPos;
+        }
+        break;
+      }
+
       case '"': {
         const [token, newPos] = tokenizeQuotedString(input, position);
         tokens.push(token);

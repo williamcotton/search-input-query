@@ -165,6 +165,41 @@ describe("Search Query Parser", () => {
     });
   });
 
+  describe("Negative Term Support", () => {
+    test("parses simple negative terms", () => {
+      testValidQuery("-test", "NOT (test)");
+      testValidQuery('-"red shoes"', 'NOT ("red shoes")');
+      testValidQuery("-status:active", "NOT (status:active)");
+    });
+
+    test("parses multiple negative terms", () => {
+      testValidQuery("-red -blue", "(NOT (red) AND NOT (blue))");
+    });
+
+    test("parses mixed positive and negative terms", () => {
+      testValidQuery("boots -leather", "(boots AND NOT (leather))");
+      testValidQuery(
+        "category:shoes -color:brown",
+        "(category:shoes AND NOT (color:brown))"
+      );
+    });
+
+    test("parses negative terms with parentheses", () => {
+      testValidQuery("-(red OR blue)", "NOT ((red OR blue))");
+      testValidQuery(
+        "shoes -(color:red OR color:blue)",
+        "(shoes AND NOT ((color:red OR color:blue)))"
+      );
+    });
+
+    test("parses complex expressions with negative terms", () => {
+      testValidQuery(
+        "boots -color:brown -(brand:nike OR brand:adidas)",
+        "((boots AND NOT (color:brown)) AND NOT ((brand:nike OR brand:adidas)))"
+      );
+    });
+  });
+
   describe("Parentheses Grouping", () => {
     test("parses simple parenthesized expressions", () => {
       testValidQuery(

@@ -247,4 +247,82 @@ describe("Lexer", () => {
       expect(tokenize("\n\t")).toEqual([]);
     });
   });
+
+  describe("Negative Terms", () => {
+    test("handles simple negative terms", () => {
+      expect(tokenize("-test")).toEqual([
+        { type: TokenType.NOT, value: "NOT", position: 0, length: 1 },
+        { type: TokenType.STRING, value: "test", position: 1, length: 4 },
+      ]);
+    });
+
+    test("handles negative quoted strings", () => {
+      expect(tokenize('-"red shoes"')).toEqual([
+        { type: TokenType.NOT, value: "NOT", position: 0, length: 1 },
+        {
+          type: TokenType.QUOTED_STRING,
+          value: "red shoes",
+          position: 1,
+          length: 11,
+        },
+      ]);
+    });
+
+    test("handles negative field:value pairs", () => {
+      expect(tokenize("-status:active")).toEqual([
+        { type: TokenType.NOT, value: "NOT", position: 0, length: 1 },
+        {
+          type: TokenType.STRING,
+          value: "status:active",
+          position: 1,
+          length: 13,
+        },
+      ]);
+    });
+
+    test("handles negative terms with parentheses", () => {
+      expect(tokenize("-(red OR blue)")).toEqual([
+        { type: TokenType.NOT, value: "NOT", position: 0, length: 1 },
+        { type: TokenType.LPAREN, value: "(", position: 1, length: 1 },
+        { type: TokenType.STRING, value: "red", position: 2, length: 3 },
+        { type: TokenType.OR, value: "OR", position: 6, length: 2 },
+        { type: TokenType.STRING, value: "blue", position: 9, length: 4 },
+        { type: TokenType.RPAREN, value: ")", position: 13, length: 1 },
+      ]);
+    });
+
+    test("handles mixed positive and negative terms", () => {
+      expect(tokenize("boots -leather")).toEqual([
+        { type: TokenType.STRING, value: "boots", position: 0, length: 5 },
+        { type: TokenType.NOT, value: "NOT", position: 6, length: 1 },
+        { type: TokenType.STRING, value: "leather", position: 7, length: 7 },
+      ]);
+    });
+
+    test("handles multiple negative terms", () => {
+      expect(tokenize("-red -blue")).toEqual([
+        { type: TokenType.NOT, value: "NOT", position: 0, length: 1 },
+        { type: TokenType.STRING, value: "red", position: 1, length: 3 },
+        { type: TokenType.NOT, value: "NOT", position: 5, length: 1 },
+        { type: TokenType.STRING, value: "blue", position: 6, length: 4 },
+      ]);
+    });
+
+    test("handles hyphens within terms", () => {
+      expect(tokenize("pre-owned")).toEqual([
+        { type: TokenType.STRING, value: "pre-owned", position: 0, length: 9 },
+      ]);
+    });
+
+    test("handles hyphens in field:value pairs", () => {
+      expect(tokenize("product-type:pre-owned")).toEqual([
+        {
+          type: TokenType.STRING,
+          value: "product-type:pre-owned",
+          position: 0,
+          length: 22,
+        },
+      ]);
+    });
+  });
 });

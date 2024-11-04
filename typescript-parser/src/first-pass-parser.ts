@@ -48,7 +48,6 @@ const expectToken = (stream: TokenStream, type: TokenType): TokenStream => {
   return advanceStream(stream);
 };
 
-// Modified parsePrimary to improve error handling
 const parsePrimary = (
   stream: TokenStream
 ): ParseResult<FirstPassExpression> => {
@@ -57,6 +56,25 @@ const parsePrimary = (
   switch (token.type) {
     case TokenType.NOT: {
       const nextStream = advanceStream(stream);
+      const nextToken = currentToken(nextStream);
+
+      // If what follows NOT is a parenthesis, parse it accordingly
+      if (nextToken.type === TokenType.LPAREN) {
+        const afterLParen = advanceStream(nextStream);
+        const exprResult = parseExpression(afterLParen);
+        const finalStream = expectToken(exprResult.stream, TokenType.RPAREN);
+        return {
+          result: {
+            type: "NOT",
+            expression: exprResult.result,
+            position: token.position,
+            length: token.length,
+          },
+          stream: finalStream,
+        };
+      }
+
+      // Otherwise, parse just the next primary expression
       const exprResult = parsePrimary(nextStream);
       return {
         result: {
@@ -68,10 +86,11 @@ const parsePrimary = (
         stream: exprResult.stream,
       };
     }
-    
+
+    // Rest of the cases remain the same
     case TokenType.LPAREN: {
       const innerStream = advanceStream(stream);
-      const exprResult = parseExpression(innerStream, 0);
+      const exprResult = parseExpression(innerStream);
       const finalStream = expectToken(exprResult.stream, TokenType.RPAREN);
       return { result: exprResult.result, stream: finalStream };
     }
@@ -147,11 +166,12 @@ export const parseExpression = (
       continue;
     }
 
-    // Handle implicit AND (adjacent terms)
+    // Handle implicit AND (adjacent terms, including NOT and parenthesized expressions)
     if (
       token.type === TokenType.STRING ||
       token.type === TokenType.QUOTED_STRING ||
-      token.type === TokenType.LPAREN
+      token.type === TokenType.LPAREN ||
+      token.type === TokenType.NOT
     ) {
       const precedence = getOperatorPrecedence(TokenType.AND);
       if (precedence < minPrecedence) break;

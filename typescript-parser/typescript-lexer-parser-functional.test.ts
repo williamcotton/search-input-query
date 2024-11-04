@@ -20,7 +20,6 @@ describe("Search Query Parser", () => {
 
   const testErrorQuery = (input: string, expectedError: string) => {
     const result = parseSearchQuery(input);
-    console.log(result);
     expect(result.type).toBe("SEARCH_QUERY_ERROR");
     const error = result as SearchQueryError;
     expect(error.error).toBe(expectedError);

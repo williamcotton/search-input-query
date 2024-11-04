@@ -371,7 +371,6 @@ const parsePrimary = (stream: TokenStream): ParseResult<Expression> => {
       };
 
     default:
-      console.log("Unexpected token:", token);
       throw {
         message: "Unexpected token",
         position: token.position,

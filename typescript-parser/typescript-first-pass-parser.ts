@@ -84,9 +84,7 @@ type SearchQuery = {
 type SearchQueryError = {
   readonly type: "SEARCH_QUERY_ERROR";
   readonly expression: null;
-  readonly error?: string;
-  readonly position?: number;
-  readonly length?: number;
+  readonly errors?: ValidationError[];
 };
 
 type ValidationError = {
@@ -132,108 +130,129 @@ const tokenizeQuotedString = (
 ): [Token, number] => {
   let value = "";
   let pos = position + 1; // Skip opening quote
-  let currentLength = pos - position; // Track length including quotes and chars
+  let length = 2; // Start with 2 for the quotes
 
   while (pos < input.length) {
     const char = input[pos];
-    currentLength++;
-    
-    if (isQuoteChar(char) && !isEscapeChar(input[pos - 1])) {
+    if (isQuoteChar(char)) {
       return [
         {
           type: TokenType.QUOTED_STRING,
           value,
           position,
-          length: currentLength,
+          length: length, // Include both quotes in length
         },
         pos + 1,
       ];
     }
-
     if (isEscapeChar(char) && pos + 1 < input.length) {
-      const nextChar = input[pos + 1];
-      // Only treat escaped quotes specially
-      if (isQuoteChar(nextChar)) {
-        value += nextChar;
-      } else {
-        value += char + nextChar;
-      }
-      currentLength++; // Account for the escaped character
+      value += input[pos + 1];
+      length += 2; // Count both escape char and escaped char
       pos += 2;
     } else {
       value += char;
+      length++;
       pos++;
     }
   }
 
-  // If we get here, the string was not terminated
-  throw {
-    message: "Unterminated quoted string",
-    position: position,
-    length: currentLength
-  };
+  throw { message: "Unterminated quoted string", position, length };
 };
 
-const tokenizeString = (
-  input: string,
-  position: number
-): [Token, number] => {
+const tokenizeString = (input: string, position: number): [Token, number] => {
   let value = "";
   let pos = position;
 
   // First read the potential field name
-  while (pos < input.length && !isWhitespace(input[pos]) && input[pos] !== ':' && !isSpecialChar(input[pos])) {
+  while (
+    pos < input.length &&
+    !isWhitespace(input[pos]) &&
+    input[pos] !== ":" &&
+    !isSpecialChar(input[pos])
+  ) {
     value += input[pos];
     pos++;
   }
 
   // Handle field:value pattern
-  if (pos < input.length && (input[pos] === ':' || (isWhitespace(input[pos]) && pos + 1 < input.length && input[pos + 1] === ':'))) {
+  if (
+    pos < input.length &&
+    (input[pos] === ":" ||
+      (isWhitespace(input[pos]) &&
+        pos + 1 < input.length &&
+        input[pos + 1] === ":"))
+  ) {
     const fieldName = value;
-    value = fieldName + ':';
-    
+    value = fieldName + ":";
+
     // Skip the colon and any whitespace
-    while (pos < input.length && (isWhitespace(input[pos]) || input[pos] === ':')) {
+    while (
+      pos < input.length &&
+      (isWhitespace(input[pos]) || input[pos] === ":")
+    ) {
       pos++;
     }
 
     // Handle quoted value
     if (pos < input.length && input[pos] === '"') {
       const [quotedToken, newPos] = tokenizeQuotedString(input, pos);
-      return [{
-        type: TokenType.STRING,
-        value: fieldName + ':' + quotedToken.value,
-        position,
-        length: newPos - position
-      }, newPos];
+      return [
+        {
+          type: TokenType.STRING,
+          value: fieldName + ":" + quotedToken.value,
+          position,
+          length: newPos - position,
+        },
+        newPos,
+      ];
     }
 
     // Handle unquoted value
-    while (pos < input.length && !isWhitespace(input[pos]) && !isSpecialChar(input[pos])) {
+    while (
+      pos < input.length &&
+      !isWhitespace(input[pos]) &&
+      !isSpecialChar(input[pos])
+    ) {
       value += input[pos];
       pos++;
     }
 
-    // Always return as STRING when it's a field:value pattern
-    return [{
+    // Always return as STRING for field:value patterns
+    return [
+      {
+        type: TokenType.STRING,
+        value,
+        position,
+        length: pos - position,
+      },
+      pos,
+    ];
+  }
+
+  // Handle operators
+  if (value === "AND" || value === "OR") {
+    if (!value.includes(":")) {
+      return [
+        {
+          type: value === "AND" ? TokenType.AND : TokenType.OR,
+          value,
+          position,
+          length: pos - position,
+        },
+        pos,
+      ];
+    }
+  }
+
+  return [
+    {
       type: TokenType.STRING,
       value,
       position,
-      length: pos - position
-    }, pos];
-  }
-
-  // Only treat standalone AND/OR as operators
-  const type = (value === "AND" || value === "OR") && !value.includes(':')
-    ? value === "AND" ? TokenType.AND : TokenType.OR
-    : TokenType.STRING;
-
-  return [{
-    type,
-    value,
-    position,
-    length: pos - position
-  }, pos];
+      length: pos - position,
+    },
+    pos,
+  ];
 };
 
 const tokenize = (input: string): Token[] => {
@@ -307,6 +326,7 @@ const expectToken = (stream: TokenStream, type: TokenType): TokenStream => {
   return advanceStream(stream);
 };
 
+// Modified parsePrimary to improve error handling
 const parsePrimary = (stream: TokenStream): ParseResult<FirstPassExpression> => {
   const token = currentToken(stream);
 
@@ -320,8 +340,6 @@ const parsePrimary = (stream: TokenStream): ParseResult<FirstPassExpression> => 
 
     case TokenType.STRING:
     case TokenType.QUOTED_STRING:
-    case TokenType.AND:
-    case TokenType.OR:
       return {
         result: {
           type: "STRING",
@@ -330,6 +348,14 @@ const parsePrimary = (stream: TokenStream): ParseResult<FirstPassExpression> => 
           length: token.length,
         },
         stream: advanceStream(stream),
+      };
+
+    case TokenType.AND:
+    case TokenType.OR:
+      throw {
+        message: `${token.value} is a reserved word`,
+        position: token.position,
+        length: token.length,
       };
 
     case TokenType.RPAREN:
@@ -416,7 +442,7 @@ const parseExpression = (
 const stringify = (expr: Expression): string => {
   switch (expr.type) {
     case "SEARCH_TERM":
-      return expr.value;
+      return expr.value.includes(" ") ? `"${expr.value}"` : expr.value;
     case "FIELD_VALUE":
       return `${expr.field}:${expr.value}`;
     case "AND":
@@ -431,53 +457,58 @@ const reservedWords = new Set(["AND", "OR"]);
 // Validate individual strings (field:value pairs or plain terms)
 const validateString = (expr: StringLiteral, errors: ValidationError[]) => {
   // Check for empty field values
-  if (expr.value.endsWith(':')) {
+  if (expr.value.endsWith(":")) {
     errors.push({
-      message: 'Empty field value',
+      message: "Expected field value",
       position: expr.position,
-      length: expr.length
+      length: expr.length,
     });
+    return;
   }
 
   // Check for field values that start with colon
-  if (expr.value.startsWith(':')) {
+  if (expr.value.startsWith(":")) {
     errors.push({
-      message: 'Missing field name',
+      message: "Missing field name",
       position: expr.position,
-      length: expr.length
+      length: expr.length,
     });
+    return;
   }
 
-  // Check for quoted strings with unescaped quotes
-  if (expr.value.includes('"') && !expr.value.includes('\\"')) {
-    errors.push({
-      message: 'Unescaped quote in value',
-      position: expr.position,
-      length: expr.length
-    });
-  }
+  // For field:value patterns, validate the field name
+  if (expr.value.includes(":")) {
+    const [fieldName] = expr.value.split(":");
 
-  // Check for invalid characters in field names
-  if (expr.value.includes(':')) {
-    const [fieldName] = expr.value.split(':');
+    // Check for reserved words used as field names
+    if (reservedWords.has(fieldName.toUpperCase())) {
+      errors.push({
+        message: `${fieldName} is a reserved word`,
+        position: expr.position,
+        length: fieldName.length,
+      });
+      return;
+    }
+
+    // Check for invalid characters in field names
     if (!/^[a-zA-Z0-9_]+$/.test(fieldName)) {
       errors.push({
-        message: 'Invalid characters in field name',
+        message: "Invalid characters in field name",
         position: expr.position,
-        length: fieldName.length
+        length: fieldName.length,
       });
+      return;
     }
   }
 
-  // Check for reserved words used as identifiers
-  if (reservedWords.has(expr.value)) {
+  // Handle standalone reserved words (not in field:value pattern)
+  if (!expr.value.includes(":") && reservedWords.has(expr.value)) {
     errors.push({
       message: `${expr.value} is a reserved word`,
       position: expr.position,
-      length: expr.length
+      length: expr.length,
     });
   }
-
 };
 
 const walkExpression = (expr: FirstPassExpression, errors: ValidationError[]) => {
@@ -581,15 +612,11 @@ const parseSearchQuery = (input: string): SearchQuery | SearchQueryError => {
 
     const errors = validateSearchQuery(result.result);
 
-    console.log(errors);
-
     if (errors.length > 0) {
       return {
         type: "SEARCH_QUERY_ERROR",
         expression: null,
-        error: errors[0].message,
-        position: errors[0].position,
-        length: errors[0].length,
+        errors: errors,
       };
     }
 
@@ -600,9 +627,7 @@ const parseSearchQuery = (input: string): SearchQuery | SearchQueryError => {
     return {
       type: "SEARCH_QUERY_ERROR",
       expression: null,
-      error: error.message,
-      position: error.position,
-      length: error.length,
+      errors: [error]
     };
   }
 };
@@ -616,6 +641,7 @@ export {
   type StringLiteral,
   type AndExpression,
   type OrExpression,
+  type ValidationError,
 };
 
 // Test cases
@@ -656,15 +682,15 @@ const testQueries = [
   'category:"winter boots" AND (AND OR color:) AND size:12',
 ];
 
-for (const query of testQueries) {
-  console.log("\nParsing query:", query);
-  try {
-    const result = parseSearchQuery(query);
-    console.log(result);
-    console.log("Parsed expression:", stringify(result.expression!));
-  } catch (error) {
-    if (error instanceof Error) {
-      console.error("Error parsing query:", error.message);
-    }
-  }
-}
+// for (const query of testQueries) {
+//   console.log("\nParsing query:", query);
+//   try {
+//     const result = parseSearchQuery(query);
+//     console.log(result);
+//     console.log("Parsed expression:", stringify(result.expression!));
+//   } catch (error) {
+//     if (error instanceof Error) {
+//       console.error("Error parsing query:", error.message);
+//     }
+//   }
+// }

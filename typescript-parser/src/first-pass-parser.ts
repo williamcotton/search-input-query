@@ -151,6 +151,17 @@ export const parseExpression = (
 
       const operator = token.type;
       const nextStream = advanceStream(result.stream);
+
+      // Check if there's a right operand
+      const nextToken = currentToken(nextStream);
+      if (nextToken.type === TokenType.EOF) {
+        throw {
+          message: `Unexpected token: ${token.value}`,
+          position: token.position, // Use the operator's position
+          length: token.length, // Use the operator's length
+        };
+      }
+
       const right = parseExpression(nextStream, precedence + 1);
 
       result = {

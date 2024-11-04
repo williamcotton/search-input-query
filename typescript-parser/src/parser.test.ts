@@ -386,16 +386,16 @@ describe("Search Query Parser", () => {
       ]);
       testErrorQuery("term AND", [
         {
-          length: 0,
-          message: "Unexpected token",
-          position: 2,
+          length: 3,
+          message: "Unexpected token: AND",
+          position: 5,
         },
       ]);
       testErrorQuery("term OR", [
         {
-          length: 0,
-          message: "Unexpected token",
-          position: 2,
+          length: 2,
+          message: "Unexpected token: OR",
+          position: 5,
         },
       ]);
       testErrorQuery("AND AND", [
@@ -425,6 +425,13 @@ describe("Search Query Parser", () => {
           length: 5,
           message: 'Expected field value',
           position: 51,
+        },
+      ]);
+      testErrorQuery('category:"winter boots" AND (value: OR color:) AND size: AND AND', [
+        {
+          length: 3,
+          message: "Unexpected token: AND",
+          position: 61,
         },
       ]);
     });

@@ -119,6 +119,33 @@ const advanceStream = (stream: TokenStream): TokenStream => ({
   position: stream.position + 1,
 });
 
+const readUntil = (
+  input: string,
+  start: number,
+  predicate: (char: string) => boolean
+): string => {
+  let result = "";
+  let pos = start;
+  while (pos < input.length && predicate(input[pos])) {
+    result += input[pos];
+    pos++;
+  }
+  return result;
+};
+
+const skipWhile = (
+  input: string,
+  start: number,
+  predicate: (char: string) => boolean
+): number => {
+  let pos = start;
+  while (pos < input.length && predicate(input[pos])) {
+    pos++;
+  }
+  return pos;
+};
+
+
 const isEscapeChar = (char: string): boolean => char === "\\";
 const isQuoteChar = (char: string): boolean => char === '"';
 const isWhitespace = (char: string): boolean => /\s/.test(char);
@@ -160,46 +187,31 @@ const tokenizeQuotedString = (
 };
 
 const tokenizeString = (input: string, position: number): [Token, number] => {
-  let value = "";
   let pos = position;
 
-  // First read the potential field name
-  while (
-    pos < input.length &&
-    !isWhitespace(input[pos]) &&
-    input[pos] !== ":" &&
-    !isSpecialChar(input[pos])
-  ) {
-    value += input[pos];
-    pos++;
-  }
+  // Read until we hit a special character, whitespace, or colon
+  const fieldPart = readUntil(
+    input,
+    pos,
+    (char) => !isWhitespace(char) && char !== ":" && !isSpecialChar(char)
+  );
+  pos += fieldPart.length;
 
-  // Handle field:value pattern
+  // Check if this is a field:value pattern
   if (
     pos < input.length &&
-    (input[pos] === ":" ||
-      (isWhitespace(input[pos]) &&
-        pos + 1 < input.length &&
-        input[pos + 1] === ":"))
+    (input[pos] === ":" || (isWhitespace(input[pos]) && input[pos + 1] === ":"))
   ) {
-    const fieldName = value;
-    value = fieldName + ":";
+    // Skip colon and whitespace
+    pos = skipWhile(input, pos, (char) => isWhitespace(char) || char === ":");
 
-    // Skip the colon and any whitespace
-    while (
-      pos < input.length &&
-      (isWhitespace(input[pos]) || input[pos] === ":")
-    ) {
-      pos++;
-    }
-
-    // Handle quoted value
+    // Handle quoted values
     if (pos < input.length && input[pos] === '"') {
       const [quotedToken, newPos] = tokenizeQuotedString(input, pos);
       return [
         {
           type: TokenType.STRING,
-          value: fieldName + ":" + quotedToken.value,
+          value: `${fieldPart}:${quotedToken.value}`,
           position,
           length: newPos - position,
         },
@@ -207,21 +219,18 @@ const tokenizeString = (input: string, position: number): [Token, number] => {
       ];
     }
 
-    // Handle unquoted value
-    while (
-      pos < input.length &&
-      !isWhitespace(input[pos]) &&
-      !isSpecialChar(input[pos])
-    ) {
-      value += input[pos];
-      pos++;
-    }
+    // Handle unquoted values
+    const valuePart = readUntil(
+      input,
+      pos,
+      (char) => !isWhitespace(char) && !isSpecialChar(char)
+    );
+    pos += valuePart.length;
 
-    // Always return as STRING for field:value patterns
     return [
       {
         type: TokenType.STRING,
-        value,
+        value: `${fieldPart}:${valuePart}`,
         position,
         length: pos - position,
       },
@@ -229,27 +238,26 @@ const tokenizeString = (input: string, position: number): [Token, number] => {
     ];
   }
 
-  // Handle operators
-  if (value === "AND" || value === "OR") {
-    if (!value.includes(":")) {
-      return [
-        {
-          type: value === "AND" ? TokenType.AND : TokenType.OR,
-          value,
-          position,
-          length: pos - position,
-        },
-        pos,
-      ];
-    }
+  // Handle logical operators
+  if (fieldPart === "AND" || fieldPart === "OR") {
+    return [
+      {
+        type: fieldPart === "AND" ? TokenType.AND : TokenType.OR,
+        value: fieldPart,
+        position,
+        length: fieldPart.length,
+      },
+      pos,
+    ];
   }
 
+  // Handle plain strings
   return [
     {
       type: TokenType.STRING,
-      value,
+      value: fieldPart,
       position,
-      length: pos - position,
+      length: fieldPart.length,
     },
     pos,
   ];
@@ -593,6 +601,7 @@ const transformToExpression = (expr: FirstPassExpression): Expression => {
 const parseSearchQuery = (input: string): SearchQuery | SearchQueryError => {
   try {
     const tokens = tokenize(input);
+    console.log(tokens);
     const stream = createStream(tokens);
 
     if (currentToken(stream).type === TokenType.EOF) {
@@ -600,6 +609,7 @@ const parseSearchQuery = (input: string): SearchQuery | SearchQueryError => {
     }
 
     const result = parseExpression(stream);
+    console.log(result);
 
     const finalToken = currentToken(result.stream);
     if (finalToken.type !== TokenType.EOF) {
@@ -682,15 +692,15 @@ const testQueries = [
   'category:"winter boots" AND (value: OR color:) AND size:',
 ];
 
-// for (const query of testQueries) {
-//   console.log("\nParsing query:", query);
-//   try {
-//     const result = parseSearchQuery(query);
-//     console.log(result);
-//     console.log("Parsed expression:", stringify(result.expression!));
-//   } catch (error) {
-//     if (error instanceof Error) {
-//       console.error("Error parsing query:", error.message);
-//     }
-//   }
-// }
+for (const query of testQueries) {
+  console.log("\nParsing query:", query);
+  try {
+    const result = parseSearchQuery(query);
+    console.log(result);
+    console.log("Parsed expression:", stringify(result.expression!));
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error("Error parsing query:", error.message);
+    }
+  }
+}

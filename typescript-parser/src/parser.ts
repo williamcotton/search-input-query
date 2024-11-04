@@ -8,14 +8,20 @@ type SearchTerm = {
   readonly value: string;
 } & PositionLength;
 
+type Field = {
+  readonly type: "FIELD";
+  readonly value: string;
+} & PositionLength;
+
+type Value = {
+  readonly type: "VALUE";
+  readonly value: string;
+} & PositionLength;
+
 type FieldValue = {
   readonly type: "FIELD_VALUE";
-  readonly field: string;
-  readonly value: string;
-  readonly fieldPosition: number;
-  readonly fieldLength: number;
-  readonly valuePosition: number;
-  readonly valueLength: number;
+  readonly field: Field;
+  readonly value: Value;
 } 
 
 type And = {
@@ -49,7 +55,7 @@ const stringify = (expr: Expression): string => {
     case "SEARCH_TERM":
       return expr.value.includes(" ") ? `"${expr.value}"` : expr.value;
     case "FIELD_VALUE":
-      return `${expr.field}:${expr.value}`;
+      return `${expr.field.value}:${expr.value.value}`;
     case "AND":
       return `(${stringify(expr.left)} AND ${stringify(expr.right)})`;
     case "OR":
@@ -73,12 +79,18 @@ const transformToExpression = (expr: FirstPassExpression): Expression => {
 
         return {
           type: "FIELD_VALUE",
-          field,
-          value: cleanValue,
-          fieldPosition: expr.position,
-          fieldLength: colonIndex,
-          valuePosition: expr.position + colonIndex + 1,
-          valueLength: value.length
+          field: {
+            type: "FIELD",
+            value: field,
+            position: expr.position,
+            length: colonIndex
+          },
+          value: {
+            type: "VALUE",
+            value: cleanValue,
+            position: expr.position + colonIndex + 1,
+            length: value.length
+          }
         };
       }
       

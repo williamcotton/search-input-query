@@ -92,7 +92,7 @@ describe("Search Query Parser", () => {
     test("handles fields with numbers and special characters", () => {
       testValidQuery("field2:value", "field2:value");
       testValidQuery("field_name:value", "field_name:value");
-      // testValidQuery("field-name:value", "field-name:value"); // TODO: should this pass?
+      testValidQuery("field-name:value", "field-name:value");
     });
 
     test("handles reserved words as identifiers", () => {
@@ -348,6 +348,21 @@ describe("Search Query Parser", () => {
           length: 2,
           message: "OR is a reserved word",
           position: 0,
+        },
+      ]);
+    });
+
+    test("handle multiple errors", () => {
+      testErrorQuery('category:"winter boots" AND (value: OR color:) AND size:', [
+        {
+          length: 6,
+          message: 'Expected field value',
+          position: 39,
+        },
+        {
+          length: 5,
+          message: 'Expected field value',
+          position: 51,
         },
       ]);
     });

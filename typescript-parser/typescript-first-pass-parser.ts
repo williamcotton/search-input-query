@@ -491,7 +491,7 @@ const validateString = (expr: StringLiteral, errors: ValidationError[]) => {
     }
 
     // Check for invalid characters in field names
-    if (!/^[a-zA-Z0-9_]+$/.test(fieldName)) {
+    if (!/^[a-zA-Z0-9_-]+$/.test(fieldName)) {
       errors.push({
         message: "Invalid characters in field name",
         position: expr.position,
@@ -679,7 +679,7 @@ const testQueries = [
   "field:value",
   "field:",
   ":value",
-  'category:"winter boots" AND (AND OR color:) AND size:12',
+  'category:"winter boots" AND (value: OR color:) AND size:',
 ];
 
 // for (const query of testQueries) {

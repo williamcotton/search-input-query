@@ -1,5 +1,6 @@
-import { tokenize, TokenType, createStream, currentToken } from "./lexer";
-import { validateSearchQuery, ValidationError, PositionLength, FirstPassExpression, parseExpression } from "./first-pass-parser";
+import { tokenize, createStream, currentToken, TokenType } from "./lexer";
+import { parseExpression, PositionLength, FirstPassExpression } from "./first-pass-parser";
+import { validateSearchQuery, ValidationError } from "./validator";
 
 // Second Pass AST types (semantic analysis)
 type SearchTerm = {

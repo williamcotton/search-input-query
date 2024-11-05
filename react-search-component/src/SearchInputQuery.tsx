@@ -1,16 +1,11 @@
-import { useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import Editor, { OnMount } from "@monaco-editor/react";
-import type { editor } from "monaco-editor";
-import {
-  parseSearchInputQuery,
-  stringify,
-  FieldSchema,
-  Expression,
-} from "../../typescript-parser/src/parser";
+import type { editor, languages, KeyCode, Range } from "monaco-editor";
+import { FieldSchema, Expression, parseSearchInputQuery, stringify } from "../../typescript-parser/src/parser";
 import type { ValidationError } from "../../typescript-parser/src/validator";
+import { createCompletionItemProvider } from "./create-completion-item-provider";
 
 interface SearchInputQueryProps {
-  allowedFields: string[];
   schemas: FieldSchema[];
   onSearchResult: (result: {
     expression: Expression | null;
@@ -19,34 +14,65 @@ interface SearchInputQueryProps {
   }) => void;
 }
 
+export interface Monaco {
+  editor: typeof editor;
+  languages: typeof languages;
+  KeyCode: typeof KeyCode;
+  Range: typeof Range;
+}
+
 export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
   schemas,
   onSearchResult,
 }) => {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
-  const [monaco, setMonaco] = useState<typeof import("monaco-editor") | null>(
-    null
-  );
+  const monacoRef = useRef<Monaco | null>(null);
   const [decorations, setDecorations] =
     useState<editor.IEditorDecorationsCollection | null>(null);
 
-  const handleEditorDidMount: OnMount = (editor, monacoInstance) => {
+  const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
-    setMonaco(monacoInstance);
+    monacoRef.current = monaco;
+
+    // Register the completion provider
+    monaco.languages.registerCompletionItemProvider(
+      "plaintext",
+      createCompletionItemProvider(monaco, schemas)
+    );
 
     editor.addAction({
       id: "submitSearch",
       label: "Submit Search",
-      keybindings: [monacoInstance.KeyCode.Enter],
+      keybindings: [monaco.KeyCode.Enter],
       run: () => {
         const currentValue = editor.getValue();
         handleSearch(currentValue);
       },
     });
+
+    // Set editor options
+    editor.updateOptions({
+      wordWrap: "off",
+      lineNumbers: "off",
+      glyphMargin: false,
+      folding: false,
+      lineDecorationsWidth: 0,
+      lineNumbersMinChars: 0,
+      minimap: { enabled: false },
+      scrollbar: {
+        horizontal: "hidden",
+        vertical: "hidden",
+      },
+      overviewRulerLanes: 0,
+      hideCursorInOverviewRuler: true,
+      overviewRulerBorder: false,
+      renderLineHighlight: "none",
+    });
   };
 
   const updateDecorations = (newErrors: ValidationError[]) => {
     const editor = editorRef.current;
+    const monaco = monacoRef.current;
     if (!editor || !monaco) return;
 
     if (decorations) {
@@ -151,42 +177,6 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
         onMount={handleEditorDidMount}
         onChange={onChange}
         className="search-input"
-        options={{
-          renderLineHighlight: "none",
-          quickSuggestions: false,
-          glyphMargin: false,
-          lineDecorationsWidth: 0,
-          folding: false,
-          fixedOverflowWidgets: true,
-          acceptSuggestionOnEnter: "on",
-          hover: { delay: 100 },
-          roundedSelection: false,
-          contextmenu: false,
-          cursorStyle: "line-thin",
-          occurrencesHighlight: "off",
-          links: false,
-          minimap: { enabled: false },
-          wordBasedSuggestions: "off",
-          find: {
-            addExtraSpaceOnTop: false,
-            autoFindInSelection: "never",
-            seedSearchStringFromSelection: "never",
-          },
-          fontSize: 14,
-          fontWeight: "normal",
-          wordWrap: "off",
-          lineNumbers: "off",
-          lineNumbersMinChars: 0,
-          overviewRulerLanes: 0,
-          overviewRulerBorder: false,
-          hideCursorInOverviewRuler: true,
-          scrollBeyondLastColumn: 0,
-          scrollbar: {
-            horizontal: "hidden",
-            vertical: "hidden",
-            alwaysConsumeMouseWheel: false,
-          },
-        }}
       />
     </div>
   );

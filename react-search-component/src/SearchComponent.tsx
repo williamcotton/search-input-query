@@ -65,7 +65,6 @@ const SearchComponent = () => {
       </div>
 
       <SearchInputQuery
-        allowedFields={allowedFields}
         schemas={schemas}
         onSearchResult={handleSearchResult}
       />

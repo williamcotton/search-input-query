@@ -1,7 +1,12 @@
 import React, { useRef, useState } from "react";
 import Editor, { OnMount } from "@monaco-editor/react";
 import type { editor, languages, KeyCode, Range } from "monaco-editor";
-import { FieldSchema, Expression, parseSearchInputQuery, stringify } from "../../typescript-parser/src/parser";
+import {
+  FieldSchema,
+  Expression,
+  parseSearchInputQuery,
+  stringify,
+} from "../../typescript-parser/src/parser";
 import type { ValidationError } from "../../typescript-parser/src/validator";
 import { createCompletionItemProvider } from "./create-completion-item-provider";
 
@@ -29,6 +34,31 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
   const monacoRef = useRef<Monaco | null>(null);
   const [decorations, setDecorations] =
     useState<editor.IEditorDecorationsCollection | null>(null);
+
+  const clearAllErrorDecorations = () => {
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    // Get the model
+    const model = editor.getModel();
+    if (!model) return;
+
+    // Find all instances of search-input-error and remove them
+    const oldDecorations = model
+      .getAllDecorations()
+      .filter((d) => d.options.inlineClassName === "search-input-error")
+      .map((d) => d.id);
+
+    if (oldDecorations.length > 0) {
+      model.deltaDecorations(oldDecorations, []);
+    }
+
+    // Also clear our stored decorations collection
+    if (decorations) {
+      decorations.clear();
+      setDecorations(null);
+    }
+  };
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
@@ -75,9 +105,8 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
     const monaco = monacoRef.current;
     if (!editor || !monaco) return;
 
-    if (decorations) {
-      decorations.clear();
-    }
+    // First, clear all existing error decorations
+    clearAllErrorDecorations();
 
     if (newErrors.length > 0) {
       const newDecorations = newErrors.map((error) => ({
@@ -100,13 +129,15 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
   };
 
   const handleSearch = (value: string) => {
+    // Always clear existing error decorations before processing new value
+    clearAllErrorDecorations();
+
     if (!value.trim()) {
       onSearchResult({
         expression: null,
         parsedResult: "",
         errors: [],
       });
-      updateDecorations([]);
       return;
     }
 
@@ -121,7 +152,6 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
         updateDecorations(result.errors);
       } else {
         const expression = result.expression;
-        updateDecorations([]);
         const parsedResult = expression ? stringify(expression) : "Empty query";
 
         onSearchResult({
@@ -181,3 +211,5 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
     </div>
   );
 };
+
+export default SearchInputQuery;

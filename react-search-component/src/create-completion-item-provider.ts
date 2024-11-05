@@ -82,75 +82,74 @@ export function createCompletionItemProvider(
         suggestions = [...fieldSuggestions, ...operators];
       }
       // Suggest values after a colon based on field type
-      // TODO: fix error highlighting glitches
       else if (previousWord) {
-        // const schema = schemas.find(
-        //   (s) => s.name.toLowerCase() === previousWord.toLowerCase()
-        // );
-        // if (schema) {
-        //   switch (schema.type) {
-        //     case "boolean":
-        //       suggestions = ["true", "false"].map((value) => ({
-        //         label: value,
-        //         kind: monaco.languages.CompletionItemKind.Value,
-        //         insertText: value,
-        //         range,
-        //       }));
-        //       break;
+        const schema = schemas.find(
+          (s) => s.name.toLowerCase() === previousWord.toLowerCase()
+        );
+        if (schema) {
+          switch (schema.type) {
+            case "boolean":
+              suggestions = ["true", "false"].map((value) => ({
+                label: value,
+                kind: monaco.languages.CompletionItemKind.Value,
+                insertText: value,
+                range,
+              }));
+              break;
 
-        //     case "number":
-        //       suggestions = [
-        //         {
-        //           label: ">",
-        //           kind: monaco.languages.CompletionItemKind.Operator,
-        //           insertText: ">",
-        //           range,
-        //         },
-        //         {
-        //           label: ">=",
-        //           kind: monaco.languages.CompletionItemKind.Operator,
-        //           insertText: ">=",
-        //           range,
-        //         },
-        //         {
-        //           label: "<",
-        //           kind: monaco.languages.CompletionItemKind.Operator,
-        //           insertText: "<",
-        //           range,
-        //         },
-        //         {
-        //           label: "<=",
-        //           kind: monaco.languages.CompletionItemKind.Operator,
-        //           insertText: "<=",
-        //           range,
-        //         },
-        //         {
-        //           label: "..",
-        //           kind: monaco.languages.CompletionItemKind.Operator,
-        //           insertText: "..",
-        //           documentation: {
-        //             value: "Range operator (e.g. 10..20)",
-        //           },
-        //           range,
-        //         },
-        //       ];
-        //       break;
+            case "number":
+              suggestions = [
+                {
+                  label: ">",
+                  kind: monaco.languages.CompletionItemKind.Operator,
+                  insertText: ">",
+                  range,
+                },
+                {
+                  label: ">=",
+                  kind: monaco.languages.CompletionItemKind.Operator,
+                  insertText: ">=",
+                  range,
+                },
+                {
+                  label: "<",
+                  kind: monaco.languages.CompletionItemKind.Operator,
+                  insertText: "<",
+                  range,
+                },
+                {
+                  label: "<=",
+                  kind: monaco.languages.CompletionItemKind.Operator,
+                  insertText: "<=",
+                  range,
+                },
+                {
+                  label: "..",
+                  kind: monaco.languages.CompletionItemKind.Operator,
+                  insertText: "..",
+                  documentation: {
+                    value: "Range operator (e.g. 10..20)",
+                  },
+                  range,
+                },
+              ];
+              break;
 
-        //     case "date":
-        //       suggestions = [
-        //         {
-        //           label: "YYYY-MM-DD",
-        //           kind: monaco.languages.CompletionItemKind.Value,
-        //           insertText: new Date().toISOString().split("T")[0],
-        //           documentation: {
-        //             value: "Date in YYYY-MM-DD format",
-        //           },
-        //           range,
-        //         },
-        //       ];
-        //       break;
-        //   }
-        // }
+            case "date":
+              suggestions = [
+                {
+                  label: "YYYY-MM-DD",
+                  kind: monaco.languages.CompletionItemKind.Value,
+                  insertText: new Date().toISOString().split("T")[0],
+                  documentation: {
+                    value: "Date in YYYY-MM-DD format",
+                  },
+                  range,
+                },
+              ];
+              break;
+          }
+        }
       }
 
       return {

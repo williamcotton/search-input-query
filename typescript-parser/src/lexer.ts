@@ -117,12 +117,9 @@ const tokenizeString = (input: string, position: number): [Token, number] => {
   pos += fieldPart.length;
 
   // Check if this is a field:value pattern
-  if (
-    pos < input.length &&
-    (input[pos] === ":" || (isWhitespace(input[pos]) && input[pos + 1] === ":"))
-  ) {
-    // Skip colon and whitespace
-    pos = skipWhile(input, pos, (char) => isWhitespace(char) || char === ":");
+  if (pos < input.length && input[pos] === ":") {
+    // Skip colon
+    pos++;
 
     // Handle quoted values
     if (pos < input.length && input[pos] === '"') {

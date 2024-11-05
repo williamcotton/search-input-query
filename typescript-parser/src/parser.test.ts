@@ -71,12 +71,46 @@ describe("Search Query Parser", () => {
     });
 
     test("handles various field:value spacing", () => {
-      testValidQuery("field: value", "field:value");
-      testValidQuery("field :value", "field:value");
-      testValidQuery("field : value", "field:value");
+      testErrorQuery("field: value", [
+        {
+          length: 6,
+          message: "Expected field value",
+          position: 0,
+        },
+      ]);
+      // testValidQuery("field :value", "field:value");
+      testErrorQuery("field: value", [
+        {
+          length: 6,
+          message: "Expected field value",
+          position: 0,
+        },
+      ]);
+      // testValidQuery("field : value", "field:value");
+      testErrorQuery("field : value", [
+        {
+          length: 1,
+          message: "Expected field value",
+          position: 6,
+        },
+      ]);
       testValidQuery('field:"quoted value"', "field:quoted value");
-      testValidQuery('field: "quoted value"', "field:quoted value");
-      testValidQuery('field :"quoted value"', "field:quoted value");
+      // testValidQuery('field: "quoted value"', "field:quoted value");
+      testErrorQuery('field: "quoted value"', [
+        {
+          length: 6,
+          message: "Expected field value",
+          position: 0,
+        },
+      ]);
+      // testValidQuery('field :"quoted value"', "field:quoted value");
+      testErrorQuery('field :"quoted value"', [
+        {
+          length: 15,
+          message: "Missing field name",
+          position: 6,
+        },
+      ]);
     });
 
     test("handles special characters in field values", () => {
@@ -297,11 +331,18 @@ describe("Search Query Parser", () => {
           position: 0,
         },
       ]);
-      testErrorQuery("field::", [{
-        "length": 7,
-        "message": "Expected field value",
-        "position": 0,
-      }]);
+      testErrorQuery("field::", [
+        {
+          length: 6,
+          message: "Expected field value",
+          position: 0,
+        },
+        {
+          length: 1,
+          message: "Expected field value",
+          position: 6,
+        },
+      ]);
     });
 
     test("handles reserved words as identifiers", () => {
@@ -415,25 +456,36 @@ describe("Search Query Parser", () => {
     });
 
     test("handle multiple errors", () => {
-      testErrorQuery('category:"winter boots" AND (value: OR color:) AND size:', [
-        {
-          length: 6,
-          message: 'Expected field value',
-          position: 39,
-        },
-        {
-          length: 5,
-          message: 'Expected field value',
-          position: 51,
-        },
-      ]);
-      testErrorQuery('category:"winter boots" AND (value: OR color:) AND size: AND AND', [
-        {
-          length: 3,
-          message: "Unexpected token: AND",
-          position: 61,
-        },
-      ]);
+      testErrorQuery(
+        'category:"winter boots" AND (value: OR color:) AND size:',
+        [
+          {
+            length: 6,
+            message: "Expected field value",
+            position: 29,
+          },
+          {
+            length: 6,
+            message: "Expected field value",
+            position: 39,
+          },
+          {
+            length: 5,
+            message: "Expected field value",
+            position: 51,
+          },
+        ]
+      );
+      testErrorQuery(
+        'category:"winter boots" AND (value: OR color:) AND size: AND AND',
+        [
+          {
+            length: 3,
+            message: "AND is a reserved word",
+            position: 61,
+          },
+        ]
+      );
     });
   });
 });

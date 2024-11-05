@@ -125,18 +125,30 @@ describe("Lexer", () => {
       expect(tokenize("field: value")).toEqual([
         {
           type: TokenType.STRING,
-          value: "field:value",
+          value: "field:",
           position: 0,
-          length: 12,
+          length: 6,
+        },
+        {
+          type: TokenType.STRING,
+          value: "value",
+          position: 7,
+          length: 5,
         },
       ]);
 
       expect(tokenize("field :value")).toEqual([
         {
           type: TokenType.STRING,
-          value: "field:value",
+          value: "field",
           position: 0,
-          length: 12,
+          length: 5,
+        },
+        {
+          type: TokenType.STRING,
+          value: ":value",
+          position: 6,
+          length: 6,
         },
       ]);
 

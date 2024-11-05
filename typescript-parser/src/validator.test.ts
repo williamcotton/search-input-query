@@ -147,9 +147,19 @@ describe("Search Query Validator", () => {
       expect(() => validateQuery("   ")).toThrow("Unexpected token");
     });
 
-    test("validates consecutive colons", () => {
-      // The lexer handles this differently, so no validation error
-      expect(validateQuery("field::value")).toEqual([]);
+    test("invalidates consecutive colons", () => {
+      expect(validateQuery("field::value")).toEqual([
+        {
+          message: "Expected field value",
+          position: 0,
+          length: 6,
+        },
+        {
+          message: "Missing field name",
+          position: 6,
+          length: 6,
+        }
+      ]);
     });
 
     test("validates field names with only special characters", () => {

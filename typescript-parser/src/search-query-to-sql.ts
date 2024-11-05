@@ -1,5 +1,4 @@
 import { Expression, SearchQuery, parseSearchQuery, FieldSchema } from "./parser";
-import { validateFields } from "./field-validator";
 
 export interface SqlQueryResult {
   text: string;
@@ -220,19 +219,15 @@ export const searchQueryToSql = (
 /**
  * Convert a search string directly to SQL
  */
-export const searchStringToSql = (searchString: string): SqlQueryResult => {
-  const query = parseSearchQuery(searchString);
+export const searchStringToSql = (
+  searchString: string,
+  searchableColumns: string[],
+  schemas: FieldSchema[] = []
+): SqlQueryResult => {
+  const query = parseSearchQuery(searchString, schemas);
   if (query.type === "SEARCH_QUERY_ERROR") {
     throw new Error(`Parse error: ${query.errors[0].message}`);
   }
 
-  const validFields = ["color", "category", "date"];
-  const searchableColumns = ["title", "description", "content", "name"];
-  const validationResult = validateFields(query, validFields);
-
-  if (!validationResult.isValid) {
-    throw new Error(`Invalid query: ${validationResult.errors[0].message}`);
-  }
-
-  return searchQueryToSql(query, searchableColumns);
+  return searchQueryToSql(query, searchableColumns, schemas);
 };

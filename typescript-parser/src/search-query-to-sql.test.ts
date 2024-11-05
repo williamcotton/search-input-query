@@ -190,14 +190,16 @@ describe("Search Query to SQL Converter", () => {
     });
 
     test("throws error for invalid query syntax", () => {
-      expect(() => searchStringToSql("AND")).toThrow("Parse error");
-      expect(() => searchStringToSql("field:")).toThrow("Parse error");
+      expect(() => searchStringToSql("AND", searchableColumns, schemas)).toThrow("Parse error");
+      expect(() =>
+        searchStringToSql("field:", searchableColumns, schemas)
+      ).toThrow("Parse error");
     });
 
     test("throws error for invalid fields", () => {
-      expect(() => searchStringToSql("invalid_field:value")).toThrow(
-        "Invalid query"
-      );
+      expect(() =>
+        searchStringToSql("invalid_field:value", searchableColumns, schemas)
+      ).toThrow('Parse error: Invalid field: "invalid_field"');
     });
   });
 

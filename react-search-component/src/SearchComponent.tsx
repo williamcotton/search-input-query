@@ -4,21 +4,22 @@ import type { editor } from "monaco-editor";
 import {
   parseSearchQuery,
   stringify,
+  FieldSchema,
 } from "../../typescript-parser/src/parser";
 import type { ValidationError } from "../../typescript-parser/src/validator";
 import { searchQueryToSql } from "../../typescript-parser/src/search-query-to-sql";
 
 // Define available fields and searchable columns
-const allowedFields = [
-  "title",
-  "description",
-  "category",
-  "status",
-  "price",
-  "date",
+const schemas: FieldSchema[] = [
+  { name: "title", type: "string" },
+  { name: "description", type: "string" },
+  { name: "status", type: "string" },
+  { name: "category", type: "string" },
+  { name: "price", type: "number" },
+  { name: "date", type: "date" },
 ];
-
-const searchableColumns = ["title", "description", "content"];
+const allowedFields = schemas.map((schema) => schema.name);
+const searchableColumns = ["title", "description"];
 
 const SearchComponent = () => {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -88,7 +89,7 @@ const SearchComponent = () => {
     }
 
     try {
-      const result = parseSearchQuery(value, allowedFields);
+      const result = parseSearchQuery(value, schemas);
       if (result.type === "SEARCH_QUERY_ERROR") {
         setErrors(result.errors);
         setParsedResult("");
@@ -102,7 +103,7 @@ const SearchComponent = () => {
         );
         // Generate SQL query
         const sql = result.expression
-          ? searchQueryToSql(result, searchableColumns)
+          ? searchQueryToSql(result, searchableColumns, schemas)
           : { text: "1=1", values: [] };
         setSqlQuery(sql);
       }

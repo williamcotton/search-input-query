@@ -63,6 +63,8 @@ const validateExpressionFields = (
       ];
     case "SEARCH_TERM":
       return [];
+    case "RANGE":
+      return validateFieldValue(expr, allowedColumns);
   }
 };
 

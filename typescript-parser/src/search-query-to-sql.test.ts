@@ -1,21 +1,39 @@
 import { describe, expect, test } from "@jest/globals";
 import { searchQueryToSql, searchStringToSql } from "./search-query-to-sql";
 import { parseSearchQuery } from "./parser";
-import type { SearchQuery } from "./parser";
+import type { SearchQuery, FieldSchema } from "./parser";
 
 describe("Search Query to SQL Converter", () => {
   const searchableColumns = ["title", "description", "content"];
+  const schemas: FieldSchema[] = [
+    { name: "price", type: "number" },
+    { name: "amount", type: "number" },
+    { name: "date", type: "date" },
+    { name: "title", type: "string" },
+    { name: "color", type: "string" },
+    { name: "status", type: "string" },
+    { name: "category", type: "string" },
+    { name: "available", type: "string" },
+    { name: "field1", type: "string" },
+    { name: "field2", type: "string" },
+    { name: "user_id", type: "number" },
+  ];
 
   const testSqlConversion = (
     query: string,
     expectedSql: string,
     expectedValues: any[]
   ) => {
-    const parsedQuery = parseSearchQuery(query);
+    const parsedQuery = parseSearchQuery(
+      query,
+      schemas
+    );
+    // console.log(parsedQuery);
     expect(parsedQuery.type).toBe("SEARCH_QUERY");
     const result = searchQueryToSql(
       parsedQuery as SearchQuery,
-      searchableColumns
+      searchableColumns,
+      schemas
     );
     expect(result.text).toBe(expectedSql);
     expect(result.values).toEqual(expectedValues);
@@ -109,7 +127,7 @@ describe("Search Query to SQL Converter", () => {
     test("converts simple NOT expressions", () => {
       testSqlConversion(
         "NOT test",
-        "NOT ((title ILIKE $1 OR description ILIKE $1 OR content ILIKE $1))",
+        "NOT (title ILIKE $1 OR description ILIKE $1 OR content ILIKE $1)",
         ["%test%"]
       );
     });
@@ -123,13 +141,13 @@ describe("Search Query to SQL Converter", () => {
     test("converts complex NOT expressions", () => {
       testSqlConversion(
         "boots AND NOT leather",
-        "((title ILIKE $1 OR description ILIKE $1 OR content ILIKE $1) AND NOT ((title ILIKE $2 OR description ILIKE $2 OR content ILIKE $2)))",
+        "((title ILIKE $1 OR description ILIKE $1 OR content ILIKE $1) AND NOT (title ILIKE $2 OR description ILIKE $2 OR content ILIKE $2))",
         ["%boots%", "%leather%"]
       );
 
       testSqlConversion(
         "NOT (color:red OR color:blue)",
-        "NOT ((color ILIKE $1 OR color ILIKE $2))",
+        "NOT (color ILIKE $1 OR color ILIKE $2)",
         ["%red%", "%blue%"]
       );
     });
@@ -208,6 +226,95 @@ describe("Search Query to SQL Converter", () => {
         "(title ILIKE $1 OR description ILIKE $1 OR content ILIKE $1)",
         ['%value"with"quotes%']
       );
+    });
+  });
+
+  describe("Range Query Conversion", () => {
+    test("converts comparison operators for numbers", () => {
+      testSqlConversion("price:>100", "price > $1", [100]);
+      testSqlConversion("price:>=100", "price >= $1", [100]);
+      testSqlConversion("price:<50", "price < $1", [50]);
+      testSqlConversion("price:<=50", "price <= $1", [50]);
+    });
+
+    test("converts between ranges for numbers", () => {
+      testSqlConversion("price:10..20", "price BETWEEN $1 AND $2", [10, 20]);
+      testSqlConversion(
+        "amount:50.99..100.50",
+        "amount BETWEEN $1 AND $2",
+        [50.99, 100.5]
+      );
+    });
+
+    test("converts open-ended ranges for numbers", () => {
+      testSqlConversion("price:10..", "price >= $1", [10]);
+      testSqlConversion("price:..20", "price <= $1", [20]);
+    });
+
+    test("converts date ranges", () => {
+      testSqlConversion("date:>2024-01-01", "date::date > $1::date", [
+        "2024-01-01",
+      ]);
+      testSqlConversion(
+        "date:2024-01-01..2024-12-31",
+        "date::date BETWEEN $1::date AND $2::date",
+        ["2024-01-01", "2024-12-31"]
+      );
+    });
+
+    test("converts complex expressions with ranges", () => {
+      testSqlConversion(
+        "price:>100 AND amount:<50",
+        "(price > $1 AND amount < $2)",
+        [100, 50]
+      );
+      testSqlConversion(
+        "price:10..20 OR amount:>=100",
+        "(price BETWEEN $1 AND $2 OR amount >= $3)",
+        [10, 20, 100]
+      );
+      testSqlConversion(
+        "(price:>100 AND amount:<50) OR date:>=2024-01-01",
+        "((price > $1 AND amount < $2) OR date::date >= $3::date)",
+        [100, 50, "2024-01-01"]
+      );
+    });
+
+    test("mixes ranges with regular field searches", () => {
+      testSqlConversion(
+        'title:"winter boots" AND price:10..20',
+        "(title ILIKE $1 AND price BETWEEN $2 AND $3)",
+        ["%winter boots%", 10, 20]
+      );
+    });
+
+    test("handles multiple date ranges in one query", () => {
+      testSqlConversion(
+        "date:>=2024-01-01 AND date:<=2024-12-31",
+        "(date::date >= $1::date AND date::date <= $2::date)",
+        ["2024-01-01", "2024-12-31"]
+      );
+    });
+
+    test("handles decimal numbers in ranges", () => {
+      testSqlConversion(
+        "price:10.5..20.99",
+        "price BETWEEN $1 AND $2",
+        [10.5, 20.99]
+      );
+    });
+
+    test("preserves numeric precision", () => {
+      testSqlConversion("price:>=99.99", "price >= $1", [99.99]);
+    });
+
+    test("handles negative numbers in ranges", () => {
+      testSqlConversion(
+        "amount:-10..10",
+        "amount BETWEEN $1 AND $2",
+        [-10, 10]
+      );
+      testSqlConversion("amount:<-10", "amount < $1", [-10]);
     });
   });
 });

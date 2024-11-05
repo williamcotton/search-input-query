@@ -6,6 +6,7 @@ import {
   type SearchQueryError,
   stringify,
   ValidationError,
+  FieldSchema,
 } from "./parser";
 
 describe("Search Query Parser", () => {
@@ -25,6 +26,33 @@ describe("Search Query Parser", () => {
     const error = result as SearchQueryError;
     expect(error.errors).toStrictEqual(expectedError);
   };
+
+  const schemas: FieldSchema[] = [
+    { name: "price", type: "number" },
+    { name: "amount", type: "number" },
+    { name: "date", type: "date" },
+    { name: "title", type: "string" },
+  ];
+
+  const testSchemaQuery = (input: string, expected: string) => {
+    const result = parseSearchQuery(
+      input,
+      schemas
+    );
+    expect(result.type).toBe("SEARCH_QUERY");
+    const query = result as SearchQuery;
+    expect(query.expression).toBeTruthy();
+    if (query.expression) {
+      expect(stringify(query.expression)).toBe(expected);
+    }
+  };
+
+  const testSchemaErrorQuery = (input: string, expectedError: ValidationError[]) => {
+    const result = parseSearchQuery(input, schemas);
+    expect(result.type).toBe("SEARCH_QUERY_ERROR");
+    const error = result as SearchQueryError;
+    expect(error.errors).toStrictEqual(expectedError);
+  }
 
   describe("Basic Term Parsing", () => {
     test("parses single terms", () => {
@@ -300,6 +328,85 @@ describe("Search Query Parser", () => {
     });
   });
 
+  describe("Range Query Support", () => {
+    test("parses comparison operators", () => {
+      testSchemaQuery("price:>100", "price:>100");
+      testSchemaQuery("price:>=100", "price:>=100");
+      testSchemaQuery("price:<50", "price:<50");
+      testSchemaQuery("price:<=50", "price:<=50");
+    });
+
+    test("parses between ranges", () => {
+      testSchemaQuery("price:10..20", "price:10..20");
+      testSchemaQuery("amount:50.99..100.50", "amount:50.99..100.50");
+      testSchemaQuery(
+        "date:2024-01-01..2024-12-31",
+        "date:2024-01-01..2024-12-31"
+      );
+    });
+
+    test("parses open-ended ranges", () => {
+      testSchemaQuery("price:10..", "price:>=10");
+      testSchemaQuery("price:..20", "price:<=20");
+      testSchemaQuery("date:2024-01-01..", "date:>=2024-01-01");
+      testSchemaQuery("date:..2024-12-31", "date:<=2024-12-31");
+    });
+
+    test("complex expressions with ranges", () => {
+      testSchemaQuery(
+        "price:>100 AND amount:<50",
+        "(price:>100 AND amount:<50)"
+      );
+      testSchemaQuery(
+        "price:10..20 OR amount:>=100",
+        "(price:10..20 OR amount:>=100)"
+      );
+      testSchemaQuery(
+        "(price:>100 AND amount:<50) OR date:>=2024-01-01",
+        "((price:>100 AND amount:<50) OR date:>=2024-01-01)"
+      );
+    });
+
+    test("mixes ranges with regular fields", () => {
+      testSchemaQuery(
+        "title:shoes AND price:10..20",
+        "(title:shoes AND price:10..20)"
+      );
+    });
+
+    test("only applies range parsing to numeric and date fields", () => {
+      const result = parseSearchQuery(
+        "title:>100",
+        schemas
+      );
+      expect(result.type).toBe("SEARCH_QUERY");
+      const query = result as SearchQuery;
+      expect(stringify(query.expression!)).toBe("title:>100");
+      expect(query.expression!.type).toBe("FIELD_VALUE");
+    });
+
+    test("parses decimal numbers in ranges", () => {
+      testSchemaQuery("price:10.5..20.99", "price:10.5..20.99");
+      testSchemaQuery("amount:50.99..100.50", "amount:50.99..100.50");
+    });
+
+    test("parses negative numbers in ranges", () => {
+      testSchemaQuery("price:-10..10", "price:-10..10");
+      testSchemaQuery("amount:-50.99..-10.50", "amount:-50.99..-10.50");
+    });
+
+    test("parses date format ranges", () => {
+      testSchemaQuery(
+        "date:2024-01-01..2024-12-31",
+        "date:2024-01-01..2024-12-31"
+      );
+      testSchemaQuery(
+        "date:2023-12-31..2024-01-01",
+        "date:2023-12-31..2024-01-01"
+      );
+    });
+  });
+
   describe("Error Cases", () => {
     test("handles empty input", () => {
       const result = parseSearchQuery("");
@@ -486,6 +593,92 @@ describe("Search Query Parser", () => {
           },
         ]
       );
+    });
+
+    test("handles malformed ranges", () => {
+      testSchemaErrorQuery("amount:>", [
+        {
+          message: "Expected range value",
+          position: 8,
+          length: 0,
+        },
+      ]);
+
+      testSchemaErrorQuery("price:>=>100", [
+        {
+          message: "Invalid range operator",
+          position: 6,
+          length: 3,
+        },
+      ]);
+
+      testSchemaErrorQuery("price:>..", [
+        {
+          message: "Invalid numeric value",
+          position: 6,
+          length: 3,
+        },
+      ]);
+
+      testSchemaErrorQuery("price:...", [
+        {
+          message: "Invalid range format",
+          position: 6,
+          length: 3,
+        },
+      ]);
+
+      testSchemaErrorQuery("price:100...", [
+        {
+          message: "Invalid range format",
+          position: 6,
+          length: 6,
+        },
+      ]);
+
+      testSchemaErrorQuery("price:...200", [
+        {
+          message: "Invalid range format",
+          position: 6,
+          length: 6,
+        },
+      ]);
+    });
+
+    test("handles invalid numeric ranges", () => {
+      testSchemaErrorQuery("price:abc..def", [
+        {
+          message: "Invalid numeric value",
+          position: 6,
+          length: 8,
+        },
+      ]);
+
+      testSchemaErrorQuery("amount:>abc", [
+        {
+          message: "Invalid numeric value",
+          position: 8,
+          length: 3,
+        },
+      ]);
+    });
+
+    test("handles invalid date ranges", () => {
+      testSchemaErrorQuery("date:>not-a-date", [
+        {
+          message: "Invalid date format",
+          position: 5,
+          length: 11,
+        },
+      ]);
+
+      testSchemaErrorQuery("date:2024-13-01..2024-12-31", [
+        {
+          message: "Invalid date format",
+          position: 5,
+          length: 22,
+        },
+      ]);
     });
   });
 });

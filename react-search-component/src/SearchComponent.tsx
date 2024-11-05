@@ -7,8 +7,9 @@ import {
 } from "../../typescript-parser/src/parser";
 import type { ValidationError } from "../../typescript-parser/src/validator";
 import { validateFields } from "../../typescript-parser/src/field-validator";
+import { searchQueryToSql } from "../../typescript-parser/src/search-query-to-sql";
 
-// Define available fields - this could come from props or configuration
+// Define available fields and searchable columns
 const availableFields = [
   "title",
   "description",
@@ -18,6 +19,8 @@ const availableFields = [
   "date",
 ];
 
+const searchableColumns = ["title", "description", "content"];
+
 const SearchComponent = () => {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const [monaco, setMonaco] = useState<typeof import("monaco-editor") | null>(
@@ -26,7 +29,12 @@ const SearchComponent = () => {
   const [decorations, setDecorations] =
     useState<editor.IEditorDecorationsCollection | null>(null);
   const [parsedResult, setParsedResult] = useState<string>("");
+  const [sqlQuery, setSqlQuery] = useState<{
+    text: string;
+    values: string[];
+  } | null>(null);
   const [errors, setErrors] = useState<ValidationError[]>([]);
+  const [showSql, setShowSql] = useState(true);
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
@@ -47,27 +55,24 @@ const SearchComponent = () => {
     const editor = editorRef.current;
     if (!editor || !monaco) return;
 
-    // Clear previous decorations
     if (decorations) {
       decorations.clear();
     }
 
     if (newErrors.length > 0) {
-      // Create new decorations for each error
       const newDecorations = newErrors.map((error) => ({
         range: new monaco.Range(
-          1, // startLineNumber
-          error.position + 1, // startColumn (Monaco is 1-based)
-          1, // endLineNumber
-          error.position + error.length + 1 // endColumn
+          1,
+          error.position + 1,
+          1,
+          error.position + error.length + 1
         ),
         options: {
-          inlineClassName: "myInlineDecoration",
+          inlineClassName: "search-input-error",
           hoverMessage: { value: error.message },
         },
       }));
 
-      // Set new decorations
       const decorationCollection =
         editor.createDecorationsCollection(newDecorations);
       setDecorations(decorationCollection);
@@ -77,6 +82,7 @@ const SearchComponent = () => {
   const handleSearch = (value: string) => {
     if (!value.trim()) {
       setParsedResult("");
+      setSqlQuery(null);
       setErrors([]);
       updateDecorations([]);
       return;
@@ -87,9 +93,9 @@ const SearchComponent = () => {
       if (result.type === "SEARCH_QUERY_ERROR") {
         setErrors(result.errors);
         setParsedResult("");
+        setSqlQuery(null);
         updateDecorations(result.errors);
       } else {
-        // Validate fields if query parsing succeeded
         const fieldValidation = validateFields(result, availableFields);
         if (!fieldValidation.isValid) {
           setErrors(
@@ -101,12 +107,18 @@ const SearchComponent = () => {
           );
           updateDecorations(fieldValidation.errors);
           setParsedResult("");
+          setSqlQuery(null);
         } else {
           setErrors([]);
           updateDecorations([]);
           setParsedResult(
             result.expression ? stringify(result.expression) : "Empty query"
           );
+          // Generate SQL query
+          const sql = result.expression
+            ? searchQueryToSql(result, searchableColumns)
+            : { text: "1=1", values: [] };
+          setSqlQuery(sql);
         }
       }
     } catch (err: unknown) {
@@ -133,6 +145,7 @@ const SearchComponent = () => {
 
       setErrors([error]);
       setParsedResult("");
+      setSqlQuery(null);
       updateDecorations([error]);
     }
   };
@@ -214,8 +227,37 @@ const SearchComponent = () => {
 
       {parsedResult && !errors.length && (
         <div className="result-container">
-          <h3>Parsed Query:</h3>
-          <code>{parsedResult}</code>
+          <div className="parsed-query">
+            <h3>Parsed Query:</h3>
+            <code>{parsedResult}</code>
+          </div>
+          <div className="sql-toggle">
+            <label className="toggle">
+              <span className="toggle-label">Show SQL</span>
+              <div className="toggle-switch">
+                <input
+                  type="checkbox"
+                  checked={showSql}
+                  onChange={(e) => setShowSql(e.target.checked)}
+                />
+                <span className="slider"></span>
+              </div>
+            </label>
+          </div>
+          {showSql && sqlQuery && (
+            <div className="sql-query">
+              <h3>SQL WHERE Clause:</h3>
+              <code>{sqlQuery.text}</code>
+              {sqlQuery.values.length > 0 && (
+                <div className="sql-params">
+                  <h4>Parameters:</h4>
+                  <code>
+                    [{sqlQuery.values.map((v) => JSON.stringify(v)).join(", ")}]
+                  </code>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

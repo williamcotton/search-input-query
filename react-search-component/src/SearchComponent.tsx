@@ -6,11 +6,10 @@ import {
   stringify,
 } from "../../typescript-parser/src/parser";
 import type { ValidationError } from "../../typescript-parser/src/validator";
-import { validateFields } from "../../typescript-parser/src/field-validator";
 import { searchQueryToSql } from "../../typescript-parser/src/search-query-to-sql";
 
 // Define available fields and searchable columns
-const availableFields = [
+const allowedFields = [
   "title",
   "description",
   "category",
@@ -89,37 +88,23 @@ const SearchComponent = () => {
     }
 
     try {
-      const result = parseSearchQuery(value);
+      const result = parseSearchQuery(value, allowedFields);
       if (result.type === "SEARCH_QUERY_ERROR") {
         setErrors(result.errors);
         setParsedResult("");
         setSqlQuery(null);
         updateDecorations(result.errors);
-      } else {
-        const fieldValidation = validateFields(result, availableFields);
-        if (!fieldValidation.isValid) {
-          setErrors(
-            fieldValidation.errors.map((error) => ({
-              message: error.message,
-              position: error.position,
-              length: error.length,
-            }))
-          );
-          updateDecorations(fieldValidation.errors);
-          setParsedResult("");
-          setSqlQuery(null);
-        } else {
-          setErrors([]);
-          updateDecorations([]);
-          setParsedResult(
-            result.expression ? stringify(result.expression) : "Empty query"
-          );
-          // Generate SQL query
-          const sql = result.expression
-            ? searchQueryToSql(result, searchableColumns)
-            : { text: "1=1", values: [] };
-          setSqlQuery(sql);
-        }
+      }  else {
+        setErrors([]);
+        updateDecorations([]);
+        setParsedResult(
+          result.expression ? stringify(result.expression) : "Empty query"
+        );
+        // Generate SQL query
+        const sql = result.expression
+          ? searchQueryToSql(result, searchableColumns)
+          : { text: "1=1", values: [] };
+        setSqlQuery(sql);
       }
     } catch (err: unknown) {
       console.error(err);
@@ -160,7 +145,7 @@ const SearchComponent = () => {
     <div className="search-container">
       <div className="available-fields">
         Available fields:{" "}
-        {availableFields.map((field) => (
+        {allowedFields.map((field) => (
           <span key={field} className="field-badge">
             {field}
           </span>

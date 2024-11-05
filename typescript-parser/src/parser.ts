@@ -1,5 +1,9 @@
 import { tokenize, createStream, currentToken, TokenType } from "./lexer";
-import { parseExpression, PositionLength, FirstPassExpression } from "./first-pass-parser";
+import {
+  parseExpression,
+  PositionLength,
+  FirstPassExpression,
+} from "./first-pass-parser";
 import { validateSearchQuery, ValidationError } from "./validator";
 
 // Second Pass AST types (semantic analysis)
@@ -22,7 +26,7 @@ type FieldValue = {
   readonly type: "FIELD_VALUE";
   readonly field: Field;
   readonly value: Value;
-} 
+};
 
 type And = {
   readonly type: "AND";
@@ -138,8 +142,52 @@ const transformToExpression = (expr: FirstPassExpression): Expression => {
   }
 };
 
+// Field validation helpers
+const validateFieldValue = (
+  expr: FirstPassExpression,
+  allowedFields: Set<string>,
+  errors: ValidationError[]
+): void => {
+  if (expr.type !== "STRING") return;
+
+  const colonIndex = expr.value.indexOf(":");
+  if (colonIndex === -1) return;
+
+  const fieldName = expr.value.substring(0, colonIndex).trim();
+  if (!allowedFields.has(fieldName.toLowerCase()) && colonIndex > 0) {
+    errors.push({
+      message: `Invalid field: "${fieldName}"`,
+      position: expr.position,
+      length: colonIndex,
+    });
+  }
+};
+
+const validateExpressionFields = (
+  expr: FirstPassExpression,
+  allowedFields: Set<string>,
+  errors: ValidationError[]
+): void => {
+  switch (expr.type) {
+    case "STRING":
+      validateFieldValue(expr, allowedFields, errors);
+      break;
+    case "AND":
+    case "OR":
+      validateExpressionFields(expr.left, allowedFields, errors);
+      validateExpressionFields(expr.right, allowedFields, errors);
+      break;
+    case "NOT":
+      validateExpressionFields(expr.expression, allowedFields, errors);
+      break;
+  }
+};
+
 // Main parse function
-const parseSearchQuery = (input: string): SearchQuery | SearchQueryError => {
+const parseSearchQuery = (
+  input: string,
+  allowedFields: string[] = []
+): SearchQuery | SearchQueryError => {
   try {
     const tokens = tokenize(input);
     const stream = createStream(tokens);
@@ -161,11 +209,35 @@ const parseSearchQuery = (input: string): SearchQuery | SearchQueryError => {
 
     const errors = validateSearchQuery(result.result);
 
-    if (errors.length > 0) {
+    const fieldErrors: ValidationError[] = [];
+
+    if (allowedFields.length > 0) {
+      const columnSet = new Set(allowedFields.map((col) => col.toLowerCase()));
+      validateExpressionFields(result.result, columnSet, fieldErrors);
+    }
+
+    const fieldErrorKeys = fieldErrors.map(
+      ({ position, length }) => `${position}-${length}`
+    );
+    const errorsToRemove = errors.filter(({ position, length }) =>
+      fieldErrorKeys.includes(`${position}-${length}`)
+    );
+    const fieldErrorsFiltered = fieldErrors.filter(
+      ({ position, length }) =>
+        !errorsToRemove.some(
+          (error) => error.position === position && error.length === length
+        )
+    );
+
+    const allErrors = [...errors, ...fieldErrorsFiltered].sort(
+      (a, b) => a.position - b.position
+    );
+
+    if (allErrors.length > 0) {
       return {
         type: "SEARCH_QUERY_ERROR",
         expression: null,
-        errors: errors,
+        errors: allErrors,
       };
     }
 
@@ -176,7 +248,7 @@ const parseSearchQuery = (input: string): SearchQuery | SearchQueryError => {
     return {
       type: "SEARCH_QUERY_ERROR",
       expression: null,
-      errors: [error]
+      errors: [error],
     };
   }
 };
@@ -187,5 +259,5 @@ export {
   type SearchQuery,
   type SearchQueryError,
   type Expression,
-  type ValidationError
+  type ValidationError,
 };

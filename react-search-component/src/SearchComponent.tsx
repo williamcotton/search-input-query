@@ -5,9 +5,12 @@ import {
   parseSearchQuery,
   stringify,
   FieldSchema,
+  Expression
 } from "../../typescript-parser/src/parser";
 import type { ValidationError } from "../../typescript-parser/src/validator";
 import { searchQueryToSql } from "../../typescript-parser/src/search-query-to-sql";
+
+import { ExpressionDescription } from "./ExpressionDescription";
 
 // Define available fields and searchable columns
 const schemas: FieldSchema[] = [
@@ -28,6 +31,7 @@ const SearchComponent = () => {
   );
   const [decorations, setDecorations] =
     useState<editor.IEditorDecorationsCollection | null>(null);
+  const [expression, setExpression] = useState<Expression | null>(null);
   const [parsedResult, setParsedResult] = useState<string>("");
   const [sqlQuery, setSqlQuery] = useState<{
     text: string;
@@ -96,6 +100,7 @@ const SearchComponent = () => {
         setSqlQuery(null);
         updateDecorations(result.errors);
       }  else {
+        setExpression(result.expression);
         setErrors([]);
         updateDecorations([]);
         setParsedResult(
@@ -213,6 +218,7 @@ const SearchComponent = () => {
 
       {parsedResult && !errors.length && (
         <div className="result-container">
+          <ExpressionDescription expression={expression} />
           <div className="parsed-query">
             <h3>Parsed Query:</h3>
             <code>{parsedResult}</code>

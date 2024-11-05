@@ -59,6 +59,79 @@ describe("Lexer", () => {
     });
   });
 
+  describe("Logical Operators", () => {
+    test("handles case-insensitive AND operator", () => {
+      const variations = ["AND", "and", "And", "aNd"];
+      variations.forEach((op) => {
+        expect(tokenize(`boots ${op} shoes`)).toEqual([
+          { type: TokenType.STRING, value: "boots", position: 0, length: 5 },
+          { type: TokenType.AND, value: "AND", position: 6, length: op.length },
+          {
+            type: TokenType.STRING,
+            value: "shoes",
+            position: 6 + op.length + 1,
+            length: 5,
+          },
+        ]);
+      });
+    });
+
+    test("handles case-insensitive OR operator", () => {
+      const variations = ["OR", "or", "Or", "oR"];
+      variations.forEach((op) => {
+        expect(tokenize(`boots ${op} shoes`)).toEqual([
+          { type: TokenType.STRING, value: "boots", position: 0, length: 5 },
+          { type: TokenType.OR, value: "OR", position: 6, length: op.length },
+          {
+            type: TokenType.STRING,
+            value: "shoes",
+            position: 6 + op.length + 1,
+            length: 5,
+          },
+        ]);
+      });
+    });
+
+    test("handles case-insensitive NOT operator", () => {
+      const variations = ["NOT", "not", "Not", "nOt"];
+      variations.forEach((op) => {
+        expect(tokenize(`${op} test`)).toEqual([
+          { type: TokenType.NOT, value: "NOT", position: 0, length: op.length },
+          {
+            type: TokenType.STRING,
+            value: "test",
+            position: op.length + 1,
+            length: 4,
+          },
+        ]);
+      });
+    });
+
+    test("handles operators as field values", () => {
+      expect(tokenize("field:and")).toEqual([
+        { type: TokenType.STRING, value: "field:and", position: 0, length: 9 },
+      ]);
+      expect(tokenize("field:or")).toEqual([
+        { type: TokenType.STRING, value: "field:or", position: 0, length: 8 },
+      ]);
+      expect(tokenize('field:"AND"')).toEqual([
+        { type: TokenType.STRING, value: "field:AND", position: 0, length: 11 },
+      ]);
+    });
+
+    test("handles mixed case in complex queries", () => {
+      expect(tokenize("boots AND shoes or sneakers AND sandals")).toEqual([
+        { type: TokenType.STRING, value: "boots", position: 0, length: 5 },
+        { type: TokenType.AND, value: "AND", position: 6, length: 3 },
+        { type: TokenType.STRING, value: "shoes", position: 10, length: 5 },
+        { type: TokenType.OR, value: "OR", position: 16, length: 2 },
+        { type: TokenType.STRING, value: "sneakers", position: 19, length: 8 },
+        { type: TokenType.AND, value: "AND", position: 28, length: 3 },
+        { type: TokenType.STRING, value: "sandals", position: 32, length: 7 },
+      ]);
+    });
+  });
+
   describe("Quoted Strings", () => {
     test("handles simple quoted strings", () => {
       expect(tokenize('"red shoes"')).toEqual([

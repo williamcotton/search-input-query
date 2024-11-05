@@ -69,7 +69,6 @@ const skipWhile = (
   return pos;
 };
 
-
 const tokenizeQuotedString = (
   input: string,
   position: number
@@ -154,17 +153,22 @@ const tokenizeString = (input: string, position: number): [Token, number] => {
     ];
   }
 
-  // Handle logical operators
-  if (fieldPart === "AND" || fieldPart === "OR" || fieldPart === "NOT") {
+  // Handle logical operators (case-insensitive)
+  const upperFieldPart = fieldPart.toUpperCase();
+  if (
+    upperFieldPart === "AND" ||
+    upperFieldPart === "OR" ||
+    upperFieldPart === "NOT"
+  ) {
     return [
       {
         type:
-          fieldPart === "AND"
+          upperFieldPart === "AND"
             ? TokenType.AND
-            : fieldPart === "OR"
+            : upperFieldPart === "OR"
             ? TokenType.OR
             : TokenType.NOT,
-        value: fieldPart,
+        value: upperFieldPart,
         position,
         length: fieldPart.length,
       },

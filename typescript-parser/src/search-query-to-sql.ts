@@ -107,37 +107,29 @@ const rangeToSql = (
 /**
  * Convert a field:value pair to SQL
  */
-// In search-query-to-sql.ts
-
-// Update fieldValueToSql to handle dates and IDs
 const fieldValueToSql = (
   field: string,
   value: string,
   state: SqlState
 ): [string, SqlState] => {
   const [paramName, newState] = nextParam(state);
-
   const schema = state.schemas.get(field.toLowerCase());
-  const isDateField = schema?.type === "date";
-  
-  // Special handling for date equality
-  if (isDateField) {
-    return [`${field}::date = ${paramName}::date`, addValue(newState, value)];
-  }
 
-  // Special handling for ID fields
-  if (field.toLowerCase().endsWith('_id')) {
-    return [
-      `${field} = ${paramName}`,
-      addValue(newState, value)
-    ];
-  }
+  // Special handling based on field type
+  switch (schema?.type) {
+    case "date":
+      return [`${field}::date = ${paramName}::date`, addValue(newState, value)];
 
-  const escapedValue = escapeSpecialChars(value);
-  return [
-    `${field} ILIKE ${paramName}`,
-    addValue(newState, `%${escapedValue}%`),
-  ];
+    case "number":
+      return [`${field} = ${paramName}`, addValue(newState, Number(value))];
+
+    default:
+      const escapedValue = escapeSpecialChars(value);
+      return [
+        `${field} ILIKE ${paramName}`,
+        addValue(newState, `%${escapedValue}%`),
+      ];
+  }
 };
 
 /**

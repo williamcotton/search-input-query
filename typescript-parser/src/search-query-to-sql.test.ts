@@ -89,7 +89,7 @@ describe("Search Query to SQL Converter", () => {
     });
 
     test("handles ID fields", () => {
-      testSqlConversion("user_id:123", "user_id = $1", ["123"]);
+      testSqlConversion("user_id:123", "user_id = $1", [123]);
     });
 
     test("escapes special characters in field values", () => {

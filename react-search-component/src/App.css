@@ -13,19 +13,128 @@
 
 .search-container {
   height: 10vh;
-  max-width: 100vh;
+  max-width: 800px;
+
+  .search-wrapper {
+    margin: 1rem 0;
+  }
 
   .search-input {
-      border: 1px solid gray;
-      padding: 5px;
-      border-radius: 5px;
+    border: 1px solid gray;
+    padding: 5px;
+    border-radius: 5px;
   }
 
-  label {
-    display: none;
+  .available-fields {
+    text-align: left;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background-color: #f5f5f5;
+    border-radius: 4px;
+
+    .field-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      margin: 0 4px;
+      background-color: #e0e0e0;
+      border-radius: 3px;
+      font-size: 0.9em;
+    }
   }
 
-  .error-message {
-    color: red;
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+  }
+
+  .error-container {
+    margin-top: 1rem;
+
+    .error-message {
+      color: red;
+      font-size: 0.9em;
+
+      #root {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 2rem;
+        text-align: center;
+      }
+
+      .search-container {
+        height: 10vh;
+        max-width: 100vh;
+
+        .search-wrapper {
+          margin: 1rem 0;
+        }
+
+        .search-input {
+          border: 1px solid gray;
+          padding: 5px;
+          border-radius: 5px;
+        }
+
+        .available-fields {
+          text-align: left;
+          margin-bottom: 1rem;
+          padding: 1rem;
+          background-color: #f5f5f5;
+          border-radius: 4px;
+
+          .field-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            margin: 0 4px;
+            background-color: #e0e0e0;
+            border-radius: 3px;
+            font-size: 0.9em;
+          }
+        }
+
+        .sr-only {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          padding: 0;
+          margin: -1px;
+          overflow: hidden;
+          clip: rect(0, 0, 0, 0);
+          border: 0;
+        }
+
+        .error-container {
+          margin-top: 1rem;
+
+          .error-message {
+            color: red;
+            font-size: 0.9em;
+            margin: 0.2rem 0;
+          }
+        }
+
+        .result-container {
+          margin-top: 1rem;
+          text-align: left;
+
+          h3 {
+            margin-bottom: 0.5rem;
+          }
+
+          code {
+            display: block;
+            padding: 0.5rem;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+          }
+        }
+      }
+    }
   }
 }

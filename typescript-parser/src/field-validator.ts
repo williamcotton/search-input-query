@@ -19,9 +19,7 @@ const createFieldError = (
   allowedColumns: Set<string>
 ): ValidationError => ({
   field,
-  message: `Invalid field: "${field}". Allowed fields are: ${[
-    ...allowedColumns,
-  ].join(", ")}`,
+  message: `Invalid field: "${field}".`,
   position,
   length,
 });

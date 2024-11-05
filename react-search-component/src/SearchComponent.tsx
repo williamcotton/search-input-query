@@ -1,8 +1,22 @@
 import { useRef, useState } from "react";
 import Editor, { OnMount } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
-import { parseSearchQuery, stringify } from "../../typescript-parser/src/parser";
+import {
+  parseSearchQuery,
+  stringify,
+} from "../../typescript-parser/src/parser";
 import type { ValidationError } from "../../typescript-parser/src/validator";
+import { validateFields } from "../../typescript-parser/src/field-validator";
+
+// Define available fields - this could come from props or configuration
+const availableFields = [
+  "title",
+  "description",
+  "category",
+  "status",
+  "price",
+  "date",
+];
 
 const SearchComponent = () => {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -75,22 +89,48 @@ const SearchComponent = () => {
         setParsedResult("");
         updateDecorations(result.errors);
       } else {
-        setErrors([]);
-        updateDecorations([]);
-        setParsedResult(
-          result.expression ? stringify(result.expression) : "Empty query"
-        );
+        // Validate fields if query parsing succeeded
+        const fieldValidation = validateFields(result, availableFields);
+        if (!fieldValidation.isValid) {
+          setErrors(
+            fieldValidation.errors.map((error) => ({
+              message: error.message,
+              position: error.position,
+              length: error.length,
+            }))
+          );
+          updateDecorations(fieldValidation.errors);
+          setParsedResult("");
+        } else {
+          setErrors([]);
+          updateDecorations([]);
+          setParsedResult(
+            result.expression ? stringify(result.expression) : "Empty query"
+          );
+        }
       }
     } catch (err: unknown) {
       console.error(err);
-      const error = {
-        // @ts-expect-error "fix later"
-        message: err.message || "An error occurred while parsing the query",
-        // @ts-expect-error "fix later"
-        position: err.position || 0,
-        // @ts-expect-error "fix later"
-        length: err.length || value.length,
+
+      const isValidationError = (e: unknown): e is ValidationError => {
+        const validationError = e as ValidationError;
+        return (
+          typeof validationError?.position === "number" &&
+          typeof validationError?.length === "number" &&
+          typeof validationError?.message === "string"
+        );
       };
+
+      const error: ValidationError = {
+        message: isValidationError(err)
+          ? err.message
+          : err instanceof Error
+          ? err.message
+          : "An error occurred while parsing the query",
+        position: isValidationError(err) ? err.position : 0,
+        length: isValidationError(err) ? err.length : value.length,
+      };
+
       setErrors([error]);
       setParsedResult("");
       updateDecorations([error]);
@@ -105,8 +145,17 @@ const SearchComponent = () => {
 
   return (
     <div className="search-container">
-      <div>
-        <label>Search Query</label>
+      <div className="available-fields">
+        Available fields:{" "}
+        {availableFields.map((field) => (
+          <span key={field} className="field-badge">
+            {field}
+          </span>
+        ))}
+      </div>
+
+      <div className="search-wrapper">
+        <label className="sr-only">Search Query</label>
         <Editor
           height="2em"
           defaultLanguage="plaintext"
@@ -122,18 +171,14 @@ const SearchComponent = () => {
             folding: false,
             fixedOverflowWidgets: true,
             acceptSuggestionOnEnter: "on",
-            hover: {
-              delay: 100,
-            },
+            hover: { delay: 100 },
             roundedSelection: false,
             contextmenu: false,
             cursorStyle: "line-thin",
             occurrencesHighlight: "off",
             links: false,
             minimap: { enabled: false },
-            // see: https://github.com/microsoft/monaco-editor/issues/1746
             wordBasedSuggestions: "off",
-            // disable `Find`
             find: {
               addExtraSpaceOnTop: false,
               autoFindInSelection: "never",
@@ -151,18 +196,24 @@ const SearchComponent = () => {
             scrollbar: {
               horizontal: "hidden",
               vertical: "hidden",
-              // avoid can not scroll page when hover monaco
               alwaysConsumeMouseWheel: false,
             },
           }}
         />
       </div>
 
-      {errors &&
-        errors.map((error, index) => <div key={index} className="error-message">{error.message}</div>)}
+      {errors.length > 0 && (
+        <div className="error-container">
+          {errors.map((error, index) => (
+            <div key={index} className="error-message">
+              {error.message}
+            </div>
+          ))}
+        </div>
+      )}
 
       {parsedResult && !errors.length && (
-        <div>
+        <div className="result-container">
           <h3>Parsed Query:</h3>
           <code>{parsedResult}</code>
         </div>
@@ -170,5 +221,5 @@ const SearchComponent = () => {
     </div>
   );
 };
- 
+
 export default SearchComponent;

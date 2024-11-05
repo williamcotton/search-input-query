@@ -1,7 +1,7 @@
 import { describe, expect, test } from "@jest/globals";
 
 import {
-  parseSearchQuery,
+  parseSearchInputQuery,
   type SearchQuery,
   type SearchQueryError,
   stringify,
@@ -11,7 +11,7 @@ import {
 
 describe("Search Query Parser", () => {
   const testValidQuery = (input: string, expected: string) => {
-    const result = parseSearchQuery(input);
+    const result = parseSearchInputQuery(input);
     expect(result.type).toBe("SEARCH_QUERY");
     const query = result as SearchQuery;
     expect(query.expression).toBeTruthy();
@@ -21,7 +21,7 @@ describe("Search Query Parser", () => {
   };
 
   const testErrorQuery = (input: string, expectedError: ValidationError[]) => {
-    const result = parseSearchQuery(input);
+    const result = parseSearchInputQuery(input);
     expect(result.type).toBe("SEARCH_QUERY_ERROR");
     const error = result as SearchQueryError;
     expect(error.errors).toStrictEqual(expectedError);
@@ -35,7 +35,7 @@ describe("Search Query Parser", () => {
   ];
 
   const testSchemaQuery = (input: string, expected: string) => {
-    const result = parseSearchQuery(
+    const result = parseSearchInputQuery(
       input,
       schemas
     );
@@ -48,7 +48,7 @@ describe("Search Query Parser", () => {
   };
 
   const testSchemaErrorQuery = (input: string, expectedError: ValidationError[]) => {
-    const result = parseSearchQuery(input, schemas);
+    const result = parseSearchInputQuery(input, schemas);
     expect(result.type).toBe("SEARCH_QUERY_ERROR");
     const error = result as SearchQueryError;
     expect(error.errors).toStrictEqual(expectedError);
@@ -375,7 +375,7 @@ describe("Search Query Parser", () => {
     });
 
     test("only applies range parsing to numeric and date fields", () => {
-      const result = parseSearchQuery(
+      const result = parseSearchInputQuery(
         "title:>100",
         schemas
       );
@@ -409,13 +409,13 @@ describe("Search Query Parser", () => {
 
   describe("Error Cases", () => {
     test("handles empty input", () => {
-      const result = parseSearchQuery("");
+      const result = parseSearchInputQuery("");
       expect(result.type).toBe("SEARCH_QUERY");
       expect((result as SearchQuery).expression).toBeNull();
     });
 
     test("handles whitespace-only input", () => {
-      const result = parseSearchQuery("   \t\n   ");
+      const result = parseSearchInputQuery("   \t\n   ");
       expect(result.type).toBe("SEARCH_QUERY");
       expect((result as SearchQuery).expression).toBeNull();
     });

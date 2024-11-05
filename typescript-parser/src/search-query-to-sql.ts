@@ -1,4 +1,4 @@
-import { Expression, SearchQuery, parseSearchQuery, FieldSchema } from "./parser";
+import { Expression, SearchQuery, parseSearchInputQuery, FieldSchema } from "./parser";
 
 export interface SqlQueryResult {
   text: string;
@@ -224,7 +224,7 @@ export const searchStringToSql = (
   searchableColumns: string[],
   schemas: FieldSchema[] = []
 ): SqlQueryResult => {
-  const query = parseSearchQuery(searchString, schemas);
+  const query = parseSearchInputQuery(searchString, schemas);
   if (query.type === "SEARCH_QUERY_ERROR") {
     throw new Error(`Parse error: ${query.errors[0].message}`);
   }

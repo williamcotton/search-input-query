@@ -7,7 +7,7 @@ import {
 import { searchQueryToSql } from "../../typescript-parser/src/search-query-to-sql";
 import type { ValidationError } from "../../typescript-parser/src/validator";
 import { ExpressionDescription } from "./ExpressionDescription";
-import { SearchQueryInput } from "./SearchQueryInput";
+import { SearchInputQuery } from "./SearchInputQuery";
 
 // Define available fields and searchable columns
 const schemas: FieldSchema[] = [
@@ -64,7 +64,7 @@ const SearchComponent = () => {
         ))}
       </div>
 
-      <SearchQueryInput
+      <SearchInputQuery
         allowedFields={allowedFields}
         schemas={schemas}
         onSearchResult={handleSearchResult}

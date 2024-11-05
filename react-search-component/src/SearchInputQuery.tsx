@@ -2,14 +2,14 @@ import { useRef, useState } from "react";
 import Editor, { OnMount } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
 import {
-  parseSearchQuery,
+  parseSearchInputQuery,
   stringify,
   FieldSchema,
   Expression,
 } from "../../typescript-parser/src/parser";
 import type { ValidationError } from "../../typescript-parser/src/validator";
 
-interface SearchQueryInputProps {
+interface SearchInputQueryProps {
   allowedFields: string[];
   schemas: FieldSchema[];
   onSearchResult: (result: {
@@ -19,7 +19,7 @@ interface SearchQueryInputProps {
   }) => void;
 }
 
-export const SearchQueryInput: React.FC<SearchQueryInputProps> = ({
+export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
   schemas,
   onSearchResult,
 }) => {
@@ -85,7 +85,7 @@ export const SearchQueryInput: React.FC<SearchQueryInputProps> = ({
     }
 
     try {
-      const result = parseSearchQuery(value, schemas);
+      const result = parseSearchInputQuery(value, schemas);
       if (result.type === "SEARCH_QUERY_ERROR") {
         onSearchResult({
           expression: null,

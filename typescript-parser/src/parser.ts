@@ -97,7 +97,7 @@ const stringify = (expr: Expression): string => {
 };
 
 // Main parse function
-export const parseSearchQuery = (
+export const parseSearchInputQuery = (
   input: string,
   fieldSchemas: FieldSchema[] = []
 ): SearchQuery | SearchQueryError => {

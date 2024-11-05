@@ -1,6 +1,6 @@
 import { describe, expect, test } from "@jest/globals";
 import { searchQueryToSql, searchStringToSql } from "./search-query-to-sql";
-import { parseSearchQuery } from "./parser";
+import { parseSearchInputQuery } from "./parser";
 import type { SearchQuery, FieldSchema } from "./parser";
 
 describe("Search Query to SQL Converter", () => {
@@ -24,7 +24,7 @@ describe("Search Query to SQL Converter", () => {
     expectedSql: string,
     expectedValues: any[]
   ) => {
-    const parsedQuery = parseSearchQuery(
+    const parsedQuery = parseSearchInputQuery(
       query,
       schemas
     );

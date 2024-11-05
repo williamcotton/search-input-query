@@ -13,7 +13,7 @@ function App() {
     <div>
       <div>
         <h1>
-          Search Query Parser
+          Search Input Query
         </h1>
         <SearchComponent />
       </div>

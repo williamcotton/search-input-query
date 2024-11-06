@@ -43,6 +43,19 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
     // Register our custom language
     registerSearchQueryLanguage(monaco);
 
+    // Configure auto-closing and surrounding behavior for searchQuery language
+    monaco.languages.setLanguageConfiguration("searchQuery", {
+      autoClosingPairs: [
+        { open: "(", close: ")" },
+        { open: '"', close: '"' },
+      ],
+      surroundingPairs: [
+        { open: "(", close: ")" },
+        { open: '"', close: '"' },
+      ],
+      brackets: [["(", ")"]],
+    });
+
     // Register the completion provider for our custom language
     monaco.languages.registerCompletionItemProvider(
       "searchQuery",
@@ -185,6 +198,11 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
           overviewRulerBorder: false,
           renderLineHighlight: "none",
           theme: "searchQueryTheme",
+          // Auto-closing configuration
+          autoClosingBrackets: "always",
+          autoClosingQuotes: "always",
+          autoClosingOvertype: "always",
+          autoSurround: "languageDefined",
         }}
       />
     </div>

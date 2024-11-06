@@ -36,11 +36,11 @@ interface ParseResult<T> {
   readonly stream: TokenStream;
 }
 
-const expectToken = (stream: TokenStream, type: TokenType): TokenStream => {
+const expectToken = (stream: TokenStream, type: TokenType, message?: string | undefined): TokenStream => {
   const token = currentToken(stream);
   if (token.type !== type) {
     throw {
-      message: `Expected ${type}`,
+      message: message ? message : `Expected ${type}`,
       position: token.position,
       length: token.length,
     };
@@ -62,7 +62,7 @@ const parsePrimary = (
       if (nextToken.type === TokenType.LPAREN) {
         const afterLParen = advanceStream(nextStream);
         const exprResult = parseExpression(afterLParen);
-        const finalStream = expectToken(exprResult.stream, TokenType.RPAREN);
+        const finalStream = expectToken(exprResult.stream, TokenType.RPAREN, "Expected ')'");
         return {
           result: {
             type: "NOT",
@@ -91,7 +91,11 @@ const parsePrimary = (
     case TokenType.LPAREN: {
       const innerStream = advanceStream(stream);
       const exprResult = parseExpression(innerStream);
-      const finalStream = expectToken(exprResult.stream, TokenType.RPAREN);
+      const finalStream = expectToken(
+        exprResult.stream,
+        TokenType.RPAREN,
+        "Expected ')'"
+      );
       return { result: exprResult.result, stream: finalStream };
     }
 

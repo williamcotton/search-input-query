@@ -58,26 +58,6 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
         handleSearch(currentValue);
       },
     });
-
-    // Set editor options
-    editor.updateOptions({
-      wordWrap: "off",
-      lineNumbers: "off",
-      glyphMargin: false,
-      folding: false,
-      lineDecorationsWidth: 0,
-      lineNumbersMinChars: 0,
-      minimap: { enabled: false },
-      scrollbar: {
-        horizontal: "hidden",
-        vertical: "hidden",
-      },
-      overviewRulerLanes: 0,
-      hideCursorInOverviewRuler: true,
-      overviewRulerBorder: false,
-      renderLineHighlight: "none",
-      theme: "searchQueryTheme",
-    });
   };
 
   const updateDecorations = (newErrors: ValidationError[]) => {
@@ -188,6 +168,24 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
         onMount={handleEditorDidMount}
         onChange={onChange}
         className="search-input"
+        options={{
+          wordWrap: "off",
+          lineNumbers: "off",
+          glyphMargin: false,
+          folding: false,
+          lineDecorationsWidth: 0,
+          lineNumbersMinChars: 0,
+          minimap: { enabled: false },
+          scrollbar: {
+            horizontal: "hidden",
+            vertical: "hidden",
+          },
+          overviewRulerLanes: 0,
+          hideCursorInOverviewRuler: true,
+          overviewRulerBorder: false,
+          renderLineHighlight: "none",
+          theme: "searchQueryTheme",
+        }}
       />
     </div>
   );

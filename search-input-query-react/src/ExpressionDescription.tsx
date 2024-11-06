@@ -2,43 +2,57 @@ import React from "react";
 import { Expression } from "../../search-input-query-parser/src/parser";
 
 // Helper function to convert Expression to English description
-const expressionToEnglish = (expr: Expression | null): string => {
+const expressionToEnglish = (
+  expr: Expression | null,
+  depth: number = 0
+): string => {
   if (!expr) {
     return "";
   }
+
+  const indent = "  ".repeat(depth);
+
   switch (expr.type) {
     case "SEARCH_TERM":
-      return `Searching for "${expr.value}"`;
+      return `${indent}Search for "${expr.value}"`;
 
     case "FIELD_VALUE":
-      return `Items where ${expr.field.value} is "${expr.value.value}"`;
+      return `${indent}${expr.field.value} contains "${expr.value.value}"`;
 
-    case "RANGE":
+    case "RANGE": {
+      const fieldName = expr.field.value;
+
       if (expr.operator === "BETWEEN") {
-        return `Items where ${expr.field.value} is between "${expr.value.value}" and "${expr.value2?.value}"`;
-      } else {
-        const operatorText = {
-          ">": "greater than",
-          ">=": "greater than or equal to",
-          "<": "less than",
-          "<=": "less than or equal to",
-        }[expr.operator];
-
-        return `Items where ${expr.field.value} is ${operatorText} "${expr.value.value}"`;
+        return `${indent}${fieldName} is between ${expr.value.value} and ${expr.value2?.value}`;
       }
 
+      const operatorText = {
+        ">": "greater than",
+        ">=": "greater than or equal to",
+        "<": "less than",
+        "<=": "less than or equal to",
+      }[expr.operator];
+
+      return `${indent}${fieldName} is ${operatorText} ${expr.value.value}`;
+    }
+
     case "NOT":
-      return `Not (${expressionToEnglish(expr.expression)})`;
+      return `${indent}NOT:\n${expressionToEnglish(
+        expr.expression,
+        depth + 1
+      )}`;
 
     case "AND":
-      return `${expressionToEnglish(expr.left)}\n— and —\n${expressionToEnglish(
-        expr.right
-      )}`;
+      return `${indent}ALL of:\n${expressionToEnglish(
+        expr.left,
+        depth + 1
+      )}\n${expressionToEnglish(expr.right, depth + 1)}`;
 
     case "OR":
-      return `${expressionToEnglish(expr.left)}\n— or —\n${expressionToEnglish(
-        expr.right
-      )}`;
+      return `${indent}ANY of:\n${expressionToEnglish(
+        expr.left,
+        depth + 1
+      )}\n${expressionToEnglish(expr.right, depth + 1)}`;
 
     default:
       return "";
@@ -54,13 +68,14 @@ export const ExpressionDescription: React.FC<ExpressionDescriptionProps> = ({
 }) => {
   const description = expressionToEnglish(expression);
 
+  if (!description) {
+    return null;
+  }
+
   return (
-    <div className="expression-description">
-      {description.split("\n").map((line, index) => (
-        <div key={index} className="description-line">
-          {line}
-        </div>
-      ))}
+    <div className="bg-gray-50 p-4 rounded-lg">
+      <h3 className="text-lg font-semibold mb-2">Query Description:</h3>
+      <pre className="font-mono text-sm whitespace-pre-wrap">{description}</pre>
     </div>
   );
 };

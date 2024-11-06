@@ -168,6 +168,14 @@ export const parseRangeExpression = (
     };
   }
 
+  if (schema?.type === "number" && isNaN(Number(value))) {
+    throw {
+      message: "Invalid numeric value",
+      position: position + colonIndex + 1,
+      length: value.length,
+    };
+  }
+
   // If no range pattern is matched, return a regular field value
   return {
     type: "FIELD_VALUE",

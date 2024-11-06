@@ -36,6 +36,31 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
   const [decorations, setDecorations] =
     useState<editor.IEditorDecorationsCollection | null>(null);
 
+  const clearAllErrorDecorations = () => {
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    // Get the model
+    const model = editor.getModel();
+    if (!model) return;
+
+    // Find all instances of search-input-error and remove them
+    const oldDecorations = model
+      .getAllDecorations()
+      .filter((d) => d.options.inlineClassName === "search-input-error")
+      .map((d) => d.id);
+
+    if (oldDecorations.length > 0) {
+      model.deltaDecorations(oldDecorations, []);
+    }
+
+    // Also clear our stored decorations collection
+    if (decorations) {
+      decorations.clear();
+      setDecorations(null);
+    }
+  };
+
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
@@ -78,9 +103,7 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
     const monaco = monacoRef.current;
     if (!editor || !monaco) return;
 
-    if (decorations) {
-      decorations.clear();
-    }
+    clearAllErrorDecorations();
 
     if (newErrors.length > 0) {
       const newDecorations = newErrors.map((error) => ({
@@ -103,6 +126,8 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
   };
 
   const handleSearch = (value: string) => {
+    clearAllErrorDecorations();
+    
     if (!value.trim()) {
       onSearchResult({
         expression: null,

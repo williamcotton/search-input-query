@@ -3,9 +3,9 @@ import {
   FieldSchema,
   Expression,
   SearchQuery,
-} from "../../typescript-parser/src/parser";
-import { searchQueryToSql } from "../../typescript-parser/src/search-query-to-sql";
-import type { ValidationError } from "../../typescript-parser/src/validator";
+} from "../../search-input-query-parser/src/parser";
+import { searchQueryToSql } from "../../search-input-query-parser/src/search-query-to-sql";
+import type { ValidationError } from "../../search-input-query-parser/src/validator";
 import { ExpressionDescription } from "./ExpressionDescription";
 import { SearchInputQuery } from "./SearchInputQuery";
 

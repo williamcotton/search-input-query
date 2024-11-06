@@ -7,7 +7,7 @@ import type {
 
 import {
   FieldSchema,
-} from "../../typescript-parser/src/parser";
+} from "../../search-input-query-parser/src/parser";
 
 import { Monaco } from "./SearchInputQuery";
 

@@ -1,5 +1,5 @@
 import React from "react";
-import { Expression } from "../../typescript-parser/src/parser";
+import { Expression } from "../../search-input-query-parser/src/parser";
 
 // Helper function to convert Expression to English description
 const expressionToEnglish = (expr: Expression | null): string => {

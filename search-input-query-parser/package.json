@@ -1,7 +1,7 @@
 {
-  "name": "typescript-parser",
+  "name": "search-input-query-parser",
   "version": "1.0.0",
-  "main": "typescript-search-string-parser.js",
+  "main": "src/parser.js",
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",

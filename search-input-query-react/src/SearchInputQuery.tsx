@@ -6,8 +6,8 @@ import {
   Expression,
   parseSearchInputQuery,
   stringify,
-} from "../../typescript-parser/src/parser";
-import type { ValidationError } from "../../typescript-parser/src/validator";
+} from "../../search-input-query-parser/src/parser";
+import type { ValidationError } from "../../search-input-query-parser/src/validator";
 import { createCompletionItemProvider } from "./create-completion-item-provider";
 import { registerSearchQueryLanguage } from "./search-syntax";
 

@@ -298,7 +298,7 @@ describe("First Pass Parser", () => {
     });
 
     test("throws error for missing right parenthesis", () => {
-      expect(() => parseQuery("(a")).toThrow("Expected RPAREN");
+      expect(() => parseQuery("(a")).toThrow("Expected ')'");
     });
 
     test("throws error for standalone operators", () => {

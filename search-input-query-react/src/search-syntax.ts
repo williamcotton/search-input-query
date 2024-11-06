@@ -62,19 +62,19 @@ export function registerSearchQueryLanguage(monaco: Monaco) {
     base: "vs",
     inherit: true,
     rules: [
-      { token: "keyword", foreground: "0000FF", fontStyle: "bold" }, // Blue, bold
-      { token: "field", foreground: "CF222E", fontStyle: "bold" }, // Red, bold for fields
-      { token: "value", foreground: "116329" }, // Dark green for values
-      { token: "operator", foreground: "953800" }, // Orange brown
-      { token: "string", foreground: "0550AE" }, // Blue
-      { token: "string.invalid", foreground: "FF0000", fontStyle: "bold" }, // Red, bold
-      { token: "string.escape", foreground: "0550AE", fontStyle: "bold" }, // Blue, bold
-      { token: "string.quote", foreground: "0550AE" }, // Blue
-      { token: "number", foreground: "0550AE" }, // Blue
-      { token: "date", foreground: "0550AE" }, // Blue
-      { token: "identifier", foreground: "24292F" }, // Dark gray
-      { token: "@brackets", foreground: "953800" }, // Orange brown
-      { token: "text", foreground: "24292F" }, // Dark gray for default text
+      { token: "keyword", foreground: "794938", fontStyle: "bold" }, // Dawn keyword color
+      { token: "field", foreground: "BF4F24", fontStyle: "bold" }, // Dawn entity color
+      { token: "value", foreground: "0B6125" }, // Dawn string color
+      { token: "operator", foreground: "811F24" }, // Dawn constant color
+      { token: "string", foreground: "0B6125" }, // Dawn string color
+      { token: "string.invalid", foreground: "B52A1D", fontStyle: "bold italic underline" }, // Dawn invalid color
+      { token: "string.escape", foreground: "CF5628", fontStyle: "bold" }, // Dawn string.regexp color
+      { token: "string.quote", foreground: "0B6125" }, // Dawn string color
+      { token: "number", foreground: "811F24" }, // Dawn constant color
+      { token: "date", foreground: "811F24" }, // Dawn constant color
+      { token: "identifier", foreground: "080808" }, // Dawn foreground color
+      { token: "@brackets", foreground: "794938" }, // Dawn punctuation color
+      { token: "text", foreground: "080808" }, // Dawn foreground color
     ],
     colors: {
       "editor.foreground": "#24292F",

@@ -1,13 +1,6 @@
-import type {
-  editor,
-  languages,
-  Position,
-  IRange,
-} from "monaco-editor";
+import type { editor, languages, Position, IRange } from "monaco-editor";
 
-import {
-  FieldSchema,
-} from "../../search-input-query-parser/src/parser";
+import { FieldSchema } from "../../search-input-query-parser/src/parser";
 
 import { Monaco } from "./SearchInputQuery";
 
@@ -43,6 +36,15 @@ export function createCompletionItemProvider(
         endColumn: position.column,
       });
 
+      // Get the current line's text
+      const currentLineText = model.getLineContent(position.lineNumber);
+
+      // Check if there's already a colon after the current word
+      const hasColonAfter = currentLineText
+        .substring(position.column - 1)
+        .trimStart()
+        .startsWith(":");
+
       const words = textUntilPosition.split(/[\s:]+/);
       const currentWord = words[words.length - 1].toLowerCase();
       const previousWord = words[words.length - 2]?.toLowerCase();
@@ -58,7 +60,7 @@ export function createCompletionItemProvider(
           .map((schema) => ({
             label: schema.name,
             kind: monaco.languages.CompletionItemKind.Field,
-            insertText: schema.name + ":",
+            insertText: schema.name + (hasColonAfter ? "" : ":"),
             detail: `Field (${schema.type})`,
             documentation: {
               value: `Search by ${schema.name}\nType: ${schema.type}`,

@@ -76,6 +76,7 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
       hideCursorInOverviewRuler: true,
       overviewRulerBorder: false,
       renderLineHighlight: "none",
+      theme: "searchQueryTheme",
     });
   };
 

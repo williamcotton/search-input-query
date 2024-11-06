@@ -6,9 +6,10 @@
 }
 
 .search-input-error {
-  color: red !important;
   cursor: pointer;
   text-decoration: underline;
+  text-decoration-style: wavy;
+  text-decoration-color: red;
 }
 
 .search-container {

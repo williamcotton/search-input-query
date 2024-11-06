@@ -62,19 +62,23 @@ export function registerSearchQueryLanguage(monaco: Monaco) {
     base: "vs",
     inherit: true,
     rules: [
-      { token: "keyword", foreground: "794938", fontStyle: "bold" }, // Dawn keyword color
-      { token: "field", foreground: "BF4F24", fontStyle: "bold" }, // Dawn entity color
-      { token: "value", foreground: "0B6125" }, // Dawn string color
-      { token: "operator", foreground: "811F24" }, // Dawn constant color
-      { token: "string", foreground: "0B6125" }, // Dawn string color
-      { token: "string.invalid", foreground: "B52A1D", fontStyle: "bold italic underline" }, // Dawn invalid color
-      { token: "string.escape", foreground: "CF5628", fontStyle: "bold" }, // Dawn string.regexp color
-      { token: "string.quote", foreground: "0B6125" }, // Dawn string color
-      { token: "number", foreground: "811F24" }, // Dawn constant color
-      { token: "date", foreground: "811F24" }, // Dawn constant color
-      { token: "identifier", foreground: "080808" }, // Dawn foreground color
-      { token: "@brackets", foreground: "794938" }, // Dawn punctuation color
-      { token: "text", foreground: "080808" }, // Dawn foreground color
+      { token: "keyword", foreground: "#794938", fontStyle: "bold" },
+      { token: "field", foreground: "#234A97", fontStyle: "bold" },
+      { token: "value", foreground: "#0B6125" },
+      { token: "operator", foreground: "#811F24" },
+      { token: "string", foreground: "#0B6125" },
+      {
+        token: "string.invalid",
+        foreground: "#B52A1D",
+        fontStyle: "bold italic underline",
+      }, // Dawn invalid color
+      { token: "string.escape", foreground: "#CF5628", fontStyle: "bold" },
+      { token: "string.quote", foreground: "#0B6125" },
+      { token: "number", foreground: "#A71D5D" },
+      { token: "date", foreground: "#A71D5D" },
+      { token: "identifier", foreground: "#080808" },
+      { token: "@brackets", foreground: "#794938" },
+      { token: "text", foreground: "#080808" },
     ],
     colors: {
       "editor.foreground": "#24292F",
@@ -82,8 +86,8 @@ export function registerSearchQueryLanguage(monaco: Monaco) {
       "editorCursor.foreground": "#24292F",
       "editor.lineHighlightBackground": "#FFFFFF",
       "editorLineNumber.foreground": "#57606A",
-      "editor.selectionBackground": "#0550AE15",
-      "editor.inactiveSelectionBackground": "#0550AE08",
+      "editor.selectionBackground": "#275FFF4D",
+      "editor.inactiveSelectionBackground": "#0550AE15",
     },
   });
 }

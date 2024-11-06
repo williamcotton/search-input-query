@@ -96,6 +96,8 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
         handleSearch(currentValue);
       },
     });
+
+    editor.focus();
   };
 
   const updateDecorations = (newErrors: ValidationError[]) => {
@@ -127,7 +129,7 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
 
   const handleSearch = (value: string) => {
     clearAllErrorDecorations();
-    
+
     if (!value.trim()) {
       onSearchResult({
         expression: null,

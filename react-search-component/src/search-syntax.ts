@@ -1,4 +1,3 @@
-import type { languages } from "monaco-editor";
 import type { Monaco } from "./SearchInputQuery";
 
 export function registerSearchQueryLanguage(monaco: Monaco) {

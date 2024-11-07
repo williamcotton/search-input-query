@@ -146,13 +146,24 @@ const rangeToSql = (
   const isDateField = schema?.type === "date";
 
   if (state.searchType === "paradedb") {
-    const [paramName, newState] = nextParam(state);
     if (operator === "BETWEEN" && value2) {
-      return [`${field} @@@ '[${value} TO ${value2}]'`, newState];
+      const [param1, state1] = nextParam(state);
+      const [param2, state2] = nextParam(state1);
+      let val1 = isDateField ? value : Number(value);
+      let val2 = isDateField ? value2 : Number(value2);
+      return [
+        `${field} @@@ '[' || ${param1} || ' TO ' || ${param2} || ']'`,
+        addValue(addValue(state2, val1), val2),
+      ];
     } else {
       // Handle >, >=, <, <= operators
+      const [paramName, newState] = nextParam(state);
       const rangeOp = operator.replace(">=", ">=").replace("<=", "<=");
-      return [`${field} @@@ '${rangeOp}${value}'`, newState];
+      const val = isDateField ? value : Number(value);
+      return [
+        `${field} @@@ '${rangeOp}' || ${paramName}`,
+        addValue(newState, val),
+      ];
     }
   }
 
@@ -194,9 +205,12 @@ const fieldValueToSql = (
     // Handle different field types for ParadeDB
     switch (schema?.type) {
       case "date":
-        return [`${field} @@@ '"${value}"'`, newState];
+        return [
+          `${field} @@@ '"' || ${paramName} || '"'`,
+          addValue(newState, value),
+        ];
       case "number":
-        return [`${field} @@@ '${value}'`, newState];
+        return [`${field} @@@ ${paramName}`, addValue(newState, Number(value))];
       default:
         const escapedValue = escapeParadeDBChars(value);
         return [`${field} @@@ ${paramName}`, addValue(newState, escapedValue)];

@@ -1,4 +1,9 @@
-import { Expression, SearchQuery, parseSearchInputQuery, FieldSchema } from "./parser";
+import {
+  Expression,
+  SearchQuery,
+  parseSearchInputQuery,
+  FieldSchema,
+} from "./parser";
 
 export interface SqlQueryResult {
   text: string;
@@ -10,8 +15,16 @@ interface SqlState {
   values: any[];
   searchableColumns: string[];
   schemas: Map<string, FieldSchema>;
+  searchType: SearchType;
+  language?: string; // For tsvector configuration
 }
 
+export type SearchType = "ilike" | "tsvector" | "paradedb";
+
+export interface SearchQueryOptions {
+  searchType?: SearchType;
+  language?: string; // PostgreSQL language configuration for tsvector
+}
 
 // Constants
 const SPECIAL_CHARS = ["%", "_"] as const;
@@ -44,25 +57,79 @@ const addValue = (state: SqlState, value: any): SqlState => ({
   values: [...state.values, value],
 });
 
+// Helper to escape special characters for ParadeDB query syntax
+const escapeParadeDBChars = (value: string): string => {
+  const specialChars = [
+    "+",
+    "^",
+    "`",
+    ":",
+    "{",
+    "}",
+    '"',
+    "[",
+    "]",
+    "(",
+    ")",
+    "<",
+    ">",
+    "~",
+    "!",
+    "\\",
+    "*",
+  ];
+  return specialChars.reduce(
+    (escaped, char) =>
+      escaped.replace(new RegExp(escapeRegExp(char), "g"), `\\${char}`),
+    value
+  );
+};
+
 /**
- * Convert a search term to SQL ILIKE conditions
+ * Convert a search term to SQL conditions based on search type
  */
 const searchTermToSql = (
   value: string,
   state: SqlState
 ): [string, SqlState] => {
-  const escapedTerm = escapeSpecialChars(value);
   const [paramName, newState] = nextParam(state);
 
-  const conditions = state.searchableColumns.map(
-    (column) => `${column} ILIKE ${paramName}`
-  );
-
-  // This part ensures we always wrap search term conditions in parentheses
-  const sql =
-    conditions.length === 1 ? conditions[0] : `(${conditions.join(" OR ")})`;
-
-  return [sql, addValue(newState, `%${escapedTerm}%`)];
+  switch (state.searchType) {
+    case "paradedb": {
+      // For paradedb, we need to escape special characters and handle multiple columns
+      const escapedValue = escapeParadeDBChars(value);
+      const conditions = state.searchableColumns.map(
+        (column) => `${column} @@@ ${paramName}`
+      );
+      const sql =
+        conditions.length === 1
+          ? conditions[0]
+          : `(${conditions.join(" OR ")})`;
+      return [sql, addValue(newState, escapedValue)];
+    }
+    case "tsvector": {
+      const langConfig = state.language || "english";
+      const conditions = state.searchableColumns.map(
+        (column) => `to_tsvector('${langConfig}', ${column})`
+      );
+      const tsvectorCondition = `(${conditions.join(
+        " || "
+      )}) @@ plainto_tsquery('${langConfig}', ${paramName})`;
+      return [tsvectorCondition, addValue(newState, value)];
+    }
+    default: {
+      // ILIKE behavior
+      const escapedTerm = escapeSpecialChars(value);
+      const conditions = state.searchableColumns.map(
+        (column) => `${column} ILIKE ${paramName}`
+      );
+      const sql =
+        conditions.length === 1
+          ? conditions[0]
+          : `(${conditions.join(" OR ")})`;
+      return [sql, addValue(newState, `%${escapedTerm}%`)];
+    }
+  }
 };
 
 /**
@@ -77,27 +144,35 @@ const rangeToSql = (
 ): [string, SqlState] => {
   const schema = state.schemas.get(field.toLowerCase());
   const isDateField = schema?.type === "date";
+
+  if (state.searchType === "paradedb") {
+    const [paramName, newState] = nextParam(state);
+    if (operator === "BETWEEN" && value2) {
+      return [`${field} @@@ '[${value} TO ${value2}]'`, newState];
+    } else {
+      // Handle >, >=, <, <= operators
+      const rangeOp = operator.replace(">=", ">=").replace("<=", "<=");
+      return [`${field} @@@ '${rangeOp}${value}'`, newState];
+    }
+  }
+
+  // Default range handling for other search types
   const typeCast = isDateField ? "::date" : "";
   const paramCast = isDateField ? "::date" : "";
 
-  // Handle BETWEEN case
   if (operator === "BETWEEN" && value2) {
     const [param1, state1] = nextParam(state);
     const [param2, state2] = nextParam(state1);
-
     let val1 = isDateField ? value : Number(value);
     let val2 = isDateField ? value2 : Number(value2);
-
     return [
       `${field}${typeCast} BETWEEN ${param1}${paramCast} AND ${param2}${paramCast}`,
       addValue(addValue(state2, val1), val2),
     ];
   }
 
-  // Handle regular comparison operators
   const [paramName, newState] = nextParam(state);
   const val = isDateField ? value : Number(value);
-
   return [
     `${field}${typeCast} ${operator} ${paramName}${paramCast}`,
     addValue(newState, val),
@@ -105,7 +180,7 @@ const rangeToSql = (
 };
 
 /**
- * Convert a field:value pair to SQL
+ * Convert a field:value pair to SQL based on search type
  */
 const fieldValueToSql = (
   field: string,
@@ -115,20 +190,42 @@ const fieldValueToSql = (
   const [paramName, newState] = nextParam(state);
   const schema = state.schemas.get(field.toLowerCase());
 
-  // Special handling based on field type
+  if (state.searchType === "paradedb") {
+    // Handle different field types for ParadeDB
+    switch (schema?.type) {
+      case "date":
+        return [`${field} @@@ '"${value}"'`, newState];
+      case "number":
+        return [`${field} @@@ '${value}'`, newState];
+      default:
+        const escapedValue = escapeParadeDBChars(value);
+        return [`${field} @@@ ${paramName}`, addValue(newState, escapedValue)];
+    }
+  }
+
+  // Handle other search types
   switch (schema?.type) {
     case "date":
       return [`${field}::date = ${paramName}::date`, addValue(newState, value)];
-
     case "number":
       return [`${field} = ${paramName}`, addValue(newState, Number(value))];
-
     default:
-      const escapedValue = escapeSpecialChars(value);
-      return [
-        `${field} ILIKE ${paramName}`,
-        addValue(newState, `%${escapedValue}%`),
-      ];
+      if (
+        state.searchType === "tsvector" &&
+        state.searchableColumns.includes(field)
+      ) {
+        const langConfig = state.language || "english";
+        return [
+          `to_tsvector('${langConfig}', ${field}) @@ plainto_tsquery('${langConfig}', ${paramName})`,
+          addValue(newState, value),
+        ];
+      } else {
+        const escapedValue = escapeSpecialChars(value);
+        return [
+          `${field} ILIKE ${paramName}`,
+          addValue(newState, `%${escapedValue}%`),
+        ];
+      }
   }
 };
 
@@ -143,7 +240,6 @@ const binaryOpToSql = (
 ): [string, SqlState] => {
   const [leftText, leftState] = expressionToSql(left, state);
   const [rightText, rightState] = expressionToSql(right, leftState);
-
   return [`(${leftText} ${operator} ${rightText})`, rightState];
 };
 
@@ -178,26 +274,27 @@ const expressionToSql = (
 
     case "NOT": {
       const [sqlText, newState] = expressionToSql(expr.expression, state);
-      // Always wrap the inner expression in parentheses for NOT
-      const wrappedText = sqlText.startsWith("(") ? sqlText : `(${sqlText})`;
-      return [`NOT ${wrappedText}`, newState];
+      return [`NOT ${sqlText}`, newState];
     }
   }
 };
 
 /**
- * Convert a SearchQuery to a SQL WHERE clause
+ * Convert a SearchQuery to a SQL WHERE clause with specified search type
  */
 export const searchQueryToSql = (
   query: SearchQuery,
   searchableColumns: string[],
-  schemas: FieldSchema[] = []
+  schemas: FieldSchema[] = [],
+  options: SearchQueryOptions = {}
 ): SqlQueryResult => {
   const initialState: SqlState = {
     paramCounter: 1,
     values: [],
     searchableColumns,
     schemas: new Map(schemas.map((s) => [s.name.toLowerCase(), s])),
+    searchType: options.searchType || "ilike",
+    language: options.language,
   };
 
   if (!query.expression) {
@@ -214,12 +311,13 @@ export const searchQueryToSql = (
 export const searchStringToSql = (
   searchString: string,
   searchableColumns: string[],
-  schemas: FieldSchema[] = []
+  schemas: FieldSchema[] = [],
+  options: SearchQueryOptions = {}
 ): SqlQueryResult => {
   const query = parseSearchInputQuery(searchString, schemas);
   if (query.type === "SEARCH_QUERY_ERROR") {
     throw new Error(`Parse error: ${query.errors[0].message}`);
   }
 
-  return searchQueryToSql(query, searchableColumns, schemas);
+  return searchQueryToSql(query, searchableColumns, schemas, options);
 };

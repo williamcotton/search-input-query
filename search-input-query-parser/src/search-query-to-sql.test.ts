@@ -28,7 +28,6 @@ describe("Search Query to SQL Converter", () => {
       query,
       schemas
     );
-    // console.log(parsedQuery);
     expect(parsedQuery.type).toBe("SEARCH_QUERY");
     const result = searchQueryToSql(
       parsedQuery as SearchQuery,
@@ -317,6 +316,115 @@ describe("Search Query to SQL Converter", () => {
         [-10, 10]
       );
       testSqlConversion("amount:<-10", "amount < $1", [-10]);
+    });
+  });
+
+  describe("tsvector Search Type", () => {
+    const testTsvectorConversion = (
+      query: string,
+      expectedSql: string,
+      expectedValues: any[]
+    ) => {
+      const parsedQuery = parseSearchInputQuery(query, schemas);
+      expect(parsedQuery.type).toBe("SEARCH_QUERY");
+      const result = searchQueryToSql(
+        parsedQuery as SearchQuery,
+        searchableColumns,
+        schemas,
+        {
+          searchType: "tsvector",
+          language: "english",
+        }
+      );
+      expect(result.text).toBe(expectedSql);
+      expect(result.values).toEqual(expectedValues);
+    };
+
+    test("converts single search term", () => {
+      testTsvectorConversion(
+        "boots",
+        "(to_tsvector('english', title) || to_tsvector('english', description) || to_tsvector('english', content)) @@ plainto_tsquery('english', $1)",
+        ["boots"]
+      );
+    });
+
+    test("converts field:value pairs", () => {
+      testTsvectorConversion(
+        "title:boots",
+        "to_tsvector('english', title) @@ plainto_tsquery('english', $1)",
+        ["boots"]
+      );
+    });
+
+    test("converts wildcards to prefix matching", () => {
+      testTsvectorConversion(
+        "boots*",
+        "(to_tsvector('english', title) || to_tsvector('english', description) || to_tsvector('english', content)) @@ to_tsquery('english', $1)",
+        ["boots:*"]
+      );
+    });
+
+    test("handles complex AND/OR expressions", () => {
+      testTsvectorConversion(
+        'boots AND "winter gear"',
+        "((to_tsvector('english', title) || to_tsvector('english', description) || to_tsvector('english', content)) @@ plainto_tsquery('english', $1) AND (to_tsvector('english', title) || to_tsvector('english', description) || to_tsvector('english', content)) @@ plainto_tsquery('english', $2))",
+        ["boots", "winter gear"]
+      );
+    });
+  });
+
+  describe("paradedb Search Type", () => {
+    const testParadeDBConversion = (
+      query: string,
+      expectedSql: string,
+      expectedValues: any[]
+    ) => {
+      const parsedQuery = parseSearchInputQuery(query, schemas);
+      expect(parsedQuery.type).toBe("SEARCH_QUERY");
+      const result = searchQueryToSql(
+        parsedQuery as SearchQuery,
+        searchableColumns,
+        schemas,
+        {
+          searchType: "paradedb",
+        }
+      );
+      expect(result.text).toBe(expectedSql);
+      expect(result.values).toEqual(expectedValues);
+    };
+
+    test("converts single search term", () => {
+      testParadeDBConversion(
+        "boots",
+        "(title @@@ $1 OR description @@@ $1 OR content @@@ $1)",
+        ['"boots"']
+      );
+    });
+
+    test("handles numeric ranges", () => {
+      testParadeDBConversion(
+        "price:10..20",
+        "price @@@ '[' || $1 || ' TO ' || $2 || ']'",
+        [10, 20]
+      );
+
+      testParadeDBConversion("price:>100", "price @@@ '>' || $1", [100]);
+    });
+
+    test("handles wildcards", () => {
+      testParadeDBConversion(
+        "boots*",
+        "(title @@@ $1 OR description @@@ $1 OR content @@@ $1)",
+        ['"boots"*']
+      );
+    });
+
+    test("handles complex expressions", () => {
+      testParadeDBConversion(
+        'title:"winter boots" AND price:>100',
+        "(title @@@ $1 AND price @@@ '>' || $2)",
+        ['"winter boots"', 100]
+      );
     });
   });
 });

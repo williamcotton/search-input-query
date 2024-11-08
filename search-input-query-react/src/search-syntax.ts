@@ -17,6 +17,10 @@ export function registerSearchQueryLanguage(monaco: Monaco) {
         // Logical operators (must come before field detection)
         [/\b(AND|OR|NOT)\b/, "keyword"],
 
+        // Invalid field patterns (must come before valid field patterns)
+        [/[^a-zA-Z0-9_-]+(?=:)/, "field"], // Invalid field characters
+        [/[a-zA-Z0-9_-]*\*+[a-zA-Z0-9_-]*(?=:)/, "field"], // Fields with wildcards
+
         // Field:value pairs
         [/[a-zA-Z][a-zA-Z0-9_-]*(?=\s*:)/, "field"], // Field before colon
         [/:/, "operator"],

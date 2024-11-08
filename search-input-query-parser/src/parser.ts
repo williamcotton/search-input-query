@@ -2,6 +2,7 @@ import { tokenize, createStream, currentToken, TokenType } from "./lexer";
 import {
   parseExpression,
   PositionLength,
+  WildcardPattern as FirstPassWildcard,
 } from "./first-pass-parser";
 import { validateSearchQuery, ValidationError } from "./validator";
 import { validateExpressionFields } from "./validate-expression-fields";
@@ -17,6 +18,12 @@ interface FieldSchema {
 type SearchTerm = {
   readonly type: "SEARCH_TERM";
   readonly value: string;
+} & PositionLength;
+
+type WildcardPattern = {
+  readonly type: "WILDCARD";
+  readonly prefix: string;
+  readonly quoted: boolean;
 } & PositionLength;
 
 type Field = {
@@ -62,7 +69,14 @@ type Not = {
   readonly expression: Expression;
 } & PositionLength;
 
-type Expression = SearchTerm | FieldValue | RangeExpression | And | Or | Not;
+type Expression =
+  | SearchTerm
+  | WildcardPattern
+  | FieldValue
+  | RangeExpression
+  | And
+  | Or
+  | Not;
 
 type SearchQuery = {
   readonly type: "SEARCH_QUERY";
@@ -80,6 +94,8 @@ const stringify = (expr: Expression): string => {
   switch (expr.type) {
     case "SEARCH_TERM":
       return expr.value.includes(" ") ? `"${expr.value}"` : expr.value;
+    case "WILDCARD":
+      return expr.quoted ? `"${expr.prefix}*"` : `${expr.prefix}*`;
     case "FIELD_VALUE":
       return `${expr.field.value}:${expr.value.value}`;
     case "RANGE":
@@ -127,8 +143,15 @@ export const parseSearchInputQuery = (
 
     if (allowedFields.length > 0) {
       const columnSet = new Set(allowedFields.map((col) => col.toLowerCase()));
-      const schemaMap = new Map(fieldSchemas.map((s) => [s.name.toLowerCase(), s]));
-      validateExpressionFields(result.result, columnSet, fieldErrors, schemaMap);
+      const schemaMap = new Map(
+        fieldSchemas.map((s) => [s.name.toLowerCase(), s])
+      );
+      validateExpressionFields(
+        result.result,
+        columnSet,
+        fieldErrors,
+        schemaMap
+      );
     }
 
     const fieldErrorKeys = fieldErrors.map(
@@ -156,7 +179,6 @@ export const parseSearchInputQuery = (
       };
     }
 
-    // Create schema map for efficient lookups
     const schemaMap = new Map(
       fieldSchemas.map((s) => [s.name.toLowerCase(), s])
     );
@@ -180,5 +202,6 @@ export {
   type FieldSchema,
   type RangeOperator,
   type RangeExpression,
+  type WildcardPattern,
   stringify,
 };

@@ -1,4 +1,8 @@
-import { StringLiteral, FirstPassExpression } from "./first-pass-parser";
+import {
+  FirstPassExpression,
+  StringLiteral,
+  WildcardPattern,
+} from "./first-pass-parser";
 
 // Validation error type
 export type ValidationError = {
@@ -11,55 +15,37 @@ const reservedWords = new Set(["AND", "OR"]);
 
 // Helper function to validate wildcard patterns
 const validateWildcard = (
-  value: string,
-  position: number,
-  expr: StringLiteral
-): ValidationError | null => {
-  // Check if this is a field:value pair
-  if (expr.value.includes(":")) {
-    const [field, ...valueParts] = expr.value.split(":");
-    const valueText = valueParts.join(":"); // Rejoin in case value contained colons
-
-    // If this came from a quoted field value, any * is valid
-    if (field.toLowerCase() === field) {
-      // Simple heuristic - field names don't include spaces
-      return null; // This was a quoted value
+  expr: StringLiteral | WildcardPattern,
+  errors: ValidationError[]
+) => {
+  if (expr.type === "STRING") {
+    const starCount = (expr.value.match(/\*/g) || []).length;
+    if (starCount > 1) {
+      const firstStar = expr.value.indexOf("*");
+      const secondStar = expr.value.indexOf("*", firstStar + 1);
+      errors.push({
+        message: "Only one wildcard (*) is allowed per term",
+        position: expr.position + secondStar,
+        length: 1,
+      });
     }
-  } else if (expr.quoted) {
-    return null; // Allow * within standalone quoted strings
   }
-
-  const starCount = (value.match(/\*/g) || []).length;
-  if (starCount > 1) {
-    const firstStar = value.indexOf("*");
-    const secondStar = value.indexOf("*", firstStar + 1);
-    return {
-      message: "Only one wildcard (*) is allowed per term",
-      position: position + secondStar,
-      length: 1,
-    };
-  }
-
-  if (starCount === 1 && !value.endsWith("*")) {
-    const starPosition = value.indexOf("*");
-    return {
-      message: "Wildcard (*) can only appear at the end of a term",
-      position: position + starPosition,
-      length: 1,
-    };
-  }
-
-  return null;
 };
 
 // Validate individual strings (field:value pairs or plain terms)
-const validateString = (expr: StringLiteral, errors: ValidationError[]) => {
-  const wildcardError = validateWildcard(expr.value, expr.position, expr);
-  if (wildcardError) {
-    errors.push(wildcardError);
-    return;
+const validateString = (
+  expr: StringLiteral | WildcardPattern,
+  errors: ValidationError[]
+) => {
+  // For wildcard patterns, additional validation if needed
+  if (expr.type === "WILDCARD") {
+    return; // Basic wildcard validation is handled at parse time
   }
 
+  // Check for multiple wildcards in the string
+  validateWildcard(expr, errors);
+
+  // Handle STRING type
   // Check for empty field values
   if (expr.value.endsWith(":")) {
     errors.push({
@@ -121,12 +107,16 @@ const walkExpression = (
 ) => {
   switch (expr.type) {
     case "STRING":
+    case "WILDCARD":
       validateString(expr, errors);
       break;
     case "AND":
     case "OR":
       walkExpression(expr.left, errors);
       walkExpression(expr.right, errors);
+      break;
+    case "NOT":
+      walkExpression(expr.expression, errors);
       break;
   }
 };

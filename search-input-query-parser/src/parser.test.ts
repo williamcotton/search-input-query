@@ -408,7 +408,7 @@ describe("Search Query Parser", () => {
     describe("Wildcard Pattern Support", () => {
       test("parses simple wildcard patterns", () => {
         testValidQuery("test*", "test*");
-        testValidQuery('"test*"', 'test*');
+        testValidQuery('"test*"', '"test*"');
         testValidQuery("field:test*", "field:test*");
         testValidQuery('field:"test*"', "field:test*");
       });
@@ -715,8 +715,8 @@ describe("Search Query Parser", () => {
 
       testErrorQuery("te*st*", [
         {
-          message: "Only one wildcard (*) is allowed per term",
-          position: 5,
+          message: "Wildcard (*) can only appear at the end of a term",
+          position: 2,
           length: 1,
         },
       ]);
@@ -725,54 +725,51 @@ describe("Search Query Parser", () => {
     test("rejects multiple trailing wildcards", () => {
       testErrorQuery("test**", [
         {
-          message: "Only one wildcard (*) is allowed per term",
-          position: 5,
+          message: "Wildcard (*) can only appear at the end of a term",
+          position: 4,
           length: 1,
         },
       ]);
 
-      // FIXME: this fails properly in the actual code but not in the test
-      // testErrorQuery('"test"**', [
-      //   {
-      //     message: "Only one wildcard (*) is allowed per term",
-      //     position: 0,
-      //     length: 8,
-      //   },
-      // ]);
+      testErrorQuery('"test"**', [
+        {
+          message: "Only one trailing wildcard (*) is allowed",
+          position: 6,
+          length: 1,
+        },
+      ]);
 
-      // FIXME: this fails properly in the actual code but not in the test
-      // testErrorQuery('field:"test"**', [
-      //   {
-      //     message:
-      //       "Invalid wildcard pattern. Only one trailing wildcard is allowed.",
-      //     position: 6,
-      //     length: 8,
-      //   },
-      // ]);
+      testErrorQuery('field:"test"**', [
+        {
+          message: "Only one trailing wildcard (*) is allowed",
+          position: 12,
+          length: 1,
+        },
+      ]);
     });
 
     test("rejects wildcards in field names", () => {
       testErrorQuery("fie*ld:value", [
         {
-          message: "Invalid characters in field name",
-          position: 0,
-          length: 6,
+          message: "Wildcard (*) can only appear at the end of a term",
+          position: 3,
+          length: 1,
         },
       ]);
 
       testErrorQuery("field*:value", [
         {
-          message: "Invalid characters in field name",
-          position: 0,
-          length: 6,
+          message: "Wildcard (*) can only appear at the end of a term",
+          position: 5,
+          length: 1,
         },
       ]);
 
       testErrorQuery("f*:value", [
         {
-          message: "Invalid characters in field name",
-          position: 0,
-          length: 2,
+          message: "Wildcard (*) can only appear at the end of a term",
+          position: 1,
+          length: 1,
         },
       ]);
     });
@@ -780,27 +777,27 @@ describe("Search Query Parser", () => {
     test("complex wildcard error cases", () => {
       testErrorQuery('field*:"test"', [
         {
-          message: "Invalid characters in field name",
-          position: 0,
-          length: 6,
+          message: "Wildcard (*) can only appear at the end of a term",
+          position: 5,
+          length: 1,
         },
       ]);
 
-      // FIXME: this fails properly in the actual code but not in the test
-      // testErrorQuery('field:"test * test"**', [
-      //   {
-      //     message:
-      //       "Invalid wildcard pattern. Only one trailing wildcard is allowed.",
-      //     position: 6,
-      //     length: 15,
-      //   },
-      // ]);
+
+      testErrorQuery('field:"test * test"**', [
+        {
+          message:
+            "Only one trailing wildcard (*) is allowed",
+          position: 19,
+          length: 1,
+        },
+      ]);
 
       testErrorQuery("test* field*:value", [
         {
-          message: "Invalid characters in field name",
-          position: 6,
-          length: 6,
+          message: "Wildcard (*) can only appear at the end of a term",
+          position: 11,
+          length: 1,
         },
       ]);
     });

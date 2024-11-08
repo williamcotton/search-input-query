@@ -12,6 +12,12 @@ export type StringLiteral = {
   readonly quoted: boolean;
 } & PositionLength;
 
+export type WildcardPattern = {
+  readonly type: "WILDCARD";
+  readonly prefix: string;
+  readonly quoted: boolean;
+} & PositionLength;
+
 export type AndExpression = {
   readonly type: "AND";
   readonly left: FirstPassExpression;
@@ -29,7 +35,12 @@ export type NotExpression = {
   readonly expression: FirstPassExpression;
 } & PositionLength;
 
-export type FirstPassExpression = StringLiteral | AndExpression | OrExpression | NotExpression;
+export type FirstPassExpression =
+  | StringLiteral
+  | WildcardPattern
+  | AndExpression
+  | OrExpression
+  | NotExpression;
 
 // Parser functions
 interface ParseResult<T> {
@@ -37,7 +48,11 @@ interface ParseResult<T> {
   readonly stream: TokenStream;
 }
 
-const expectToken = (stream: TokenStream, type: TokenType, message?: string | undefined): TokenStream => {
+const expectToken = (
+  stream: TokenStream,
+  type: TokenType,
+  message?: string
+): TokenStream => {
   const token = currentToken(stream);
   if (token.type !== type) {
     throw {
@@ -47,6 +62,71 @@ const expectToken = (stream: TokenStream, type: TokenType, message?: string | un
     };
   }
   return advanceStream(stream);
+};
+
+// Helper to check if a string value represents a field:value pattern
+const isFieldValuePattern = (value: string): boolean => {
+  return value.includes(":");
+};
+
+// Helper to extract field and value from a field:value pattern
+const extractFieldValue = (value: string): [string, string] => {
+  const [field, ...valueParts] = value.split(":");
+  return [field, valueParts.join(":")];
+};
+
+// Helper to validate and extract wildcard pattern
+const processWildcardPattern = (
+  value: string,
+  isQuoted: boolean
+): {
+  prefix: string;
+  error?: { message: string; position: number; length: number };
+} => {
+  // For unquoted strings, only allow wildcard at the end
+  if (!isQuoted) {
+    const wildcardIndex = value.indexOf("*");
+    if (wildcardIndex !== -1 && wildcardIndex !== value.length - 1) {
+      return {
+        prefix: value,
+        error: {
+          message: "Wildcard (*) can only appear at the end of a term",
+          position: wildcardIndex,
+          length: 1,
+        },
+      };
+    }
+
+    // Check for multiple wildcards in unquoted strings
+    const wildcardCount = (value.match(/\*/g) || []).length;
+    if (wildcardCount > 1) {
+      const secondWildcardIndex = value.indexOf("*", value.indexOf("*") + 1);
+      return {
+        prefix: value,
+        error: {
+          message: "Only one wildcard (*) is allowed per term",
+          position: secondWildcardIndex,
+          length: 1,
+        },
+      };
+    }
+  } else {
+    // For quoted strings, only check for multiple trailing wildcards
+    if (value.endsWith("**")) {
+      return {
+        prefix: value,
+        error: {
+          message: "Only one trailing wildcard (*) is allowed",
+          position: value.length,
+          length: 1,
+        },
+      };
+    }
+  }
+
+  // Get prefix by removing trailing wildcard if present
+  const prefix = value.endsWith("*") ? value.slice(0, -1) : value;
+  return { prefix };
 };
 
 const parsePrimary = (
@@ -59,11 +139,14 @@ const parsePrimary = (
       const nextStream = advanceStream(stream);
       const nextToken = currentToken(nextStream);
 
-      // If what follows NOT is a parenthesis, parse it accordingly
       if (nextToken.type === TokenType.LPAREN) {
         const afterLParen = advanceStream(nextStream);
         const exprResult = parseExpression(afterLParen);
-        const finalStream = expectToken(exprResult.stream, TokenType.RPAREN, "Expected ')'");
+        const finalStream = expectToken(
+          exprResult.stream,
+          TokenType.RPAREN,
+          "Expected ')'"
+        );
         return {
           result: {
             type: "NOT",
@@ -75,7 +158,6 @@ const parsePrimary = (
         };
       }
 
-      // Otherwise, parse just the next primary expression
       const exprResult = parsePrimary(nextStream);
       return {
         result: {
@@ -88,7 +170,6 @@ const parsePrimary = (
       };
     }
 
-    // Rest of the cases remain the same
     case TokenType.LPAREN: {
       const innerStream = advanceStream(stream);
       const exprResult = parseExpression(innerStream);
@@ -101,17 +182,103 @@ const parsePrimary = (
     }
 
     case TokenType.STRING:
-    case TokenType.QUOTED_STRING:
+    case TokenType.QUOTED_STRING: {
+      const { value } = token;
+      const isQuoted = token.type === TokenType.QUOTED_STRING;
+
+      // Handle field:value patterns
+      if (isFieldValuePattern(value)) {
+        const [field, rawValue] = extractFieldValue(value);
+        const { prefix, error } = processWildcardPattern(rawValue, isQuoted);
+
+        if (error) {
+          throw {
+            message: error.message,
+            position: token.position + field.length + 1 + error.position, // Adjust position for field name and colon
+            length: error.length,
+          };
+        }
+
+        // Return as string if quoted with internal wildcards
+        if (isQuoted && !rawValue.endsWith("*") && rawValue.includes("*")) {
+          return {
+            result: {
+              type: "STRING",
+              value: value,
+              quoted: true,
+              position: token.position,
+              length: token.length,
+            },
+            stream: advanceStream(stream),
+          };
+        }
+
+        // If it has a trailing wildcard
+        if (rawValue.endsWith("*")) {
+          return {
+            result: {
+              type: "WILDCARD",
+              prefix: `${field}:${prefix}`,
+              quoted: isQuoted,
+              position: token.position,
+              length: token.length,
+            },
+            stream: advanceStream(stream),
+          };
+        }
+      }
+
+      // Handle regular terms with wildcards
+      const { prefix, error } = processWildcardPattern(value, isQuoted);
+
+      if (error) {
+        throw {
+          message: error.message,
+          position: token.position + error.position,
+          length: error.length,
+        };
+      }
+
+      // Return as string if quoted with internal wildcards
+      if (isQuoted && !value.endsWith("*") && value.includes("*")) {
+        return {
+          result: {
+            type: "STRING",
+            value,
+            quoted: true,
+            position: token.position,
+            length: token.length,
+          },
+          stream: advanceStream(stream),
+        };
+      }
+
+      // If it has a trailing wildcard
+      if (value.endsWith("*")) {
+        return {
+          result: {
+            type: "WILDCARD",
+            prefix,
+            quoted: isQuoted,
+            position: token.position,
+            length: token.length,
+          },
+          stream: advanceStream(stream),
+        };
+      }
+
+      // Regular string without wildcards
       return {
         result: {
           type: "STRING",
-          value: token.value,
+          value,
+          quoted: token.type === TokenType.QUOTED_STRING,
           position: token.position,
           length: token.length,
-          quoted: token.type === TokenType.QUOTED_STRING,
         },
         stream: advanceStream(stream),
       };
+    }
 
     case TokenType.AND:
     case TokenType.OR:
@@ -150,7 +317,6 @@ export const parseExpression = (
     const token = currentToken(result.stream);
     if (token.type === TokenType.EOF) break;
 
-    // Handle explicit operators (AND/OR)
     if (token.type === TokenType.AND || token.type === TokenType.OR) {
       const precedence = getOperatorPrecedence(token.type);
       if (precedence < minPrecedence) break;
@@ -158,13 +324,12 @@ export const parseExpression = (
       const operator = token.type;
       const nextStream = advanceStream(result.stream);
 
-      // Check if there's a right operand
       const nextToken = currentToken(nextStream);
       if (nextToken.type === TokenType.EOF) {
         throw {
           message: `Unexpected token: ${token.value}`,
-          position: token.position, // Use the operator's position
-          length: token.length, // Use the operator's length
+          position: token.position,
+          length: token.length,
         };
       }
 
@@ -183,7 +348,6 @@ export const parseExpression = (
       continue;
     }
 
-    // Handle implicit AND (adjacent terms, including NOT and parenthesized expressions)
     if (
       token.type === TokenType.STRING ||
       token.type === TokenType.QUOTED_STRING ||

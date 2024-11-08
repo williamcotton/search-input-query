@@ -16,6 +16,39 @@ export const transformToExpression = (
         length: expr.length,
       };
 
+    case "WILDCARD":
+      // Check if this is part of a field:value pattern by looking at the prefix
+      const colonIndex = expr.prefix.indexOf(":");
+      if (colonIndex !== -1) {
+        const field = expr.prefix.substring(0, colonIndex).trim();
+        const prefix = expr.prefix.substring(colonIndex + 1).trim();
+
+        return {
+          type: "FIELD_VALUE",
+          field: {
+            type: "FIELD",
+            value: field,
+            position: expr.position - colonIndex - 1, // Adjust for the field part
+            length: colonIndex,
+          },
+          value: {
+            type: "VALUE",
+            value: prefix + "*", // Preserve the wildcard in the value
+            position: expr.position,
+            length: prefix.length + 1,
+          },
+        };
+      }
+
+      // If not a field:value pattern, return as a wildcard search term
+      return {
+        type: "WILDCARD",
+        prefix: expr.prefix,
+        quoted: expr.quoted,
+        position: expr.position,
+        length: expr.length,
+      };
+
     case "STRING": {
       // Check if the string is a field:value pattern
       const colonIndex = expr.value.indexOf(":");

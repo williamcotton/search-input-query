@@ -75,60 +75,6 @@ const extractFieldValue = (value: string): [string, string] => {
   return [field, valueParts.join(":")];
 };
 
-// Helper to validate and extract wildcard pattern
-const processWildcardPattern = (
-  value: string,
-  isQuoted: boolean
-): {
-  prefix: string;
-  error?: { message: string; position: number; length: number };
-} => {
-  // For unquoted strings, only allow wildcard at the end
-  if (!isQuoted) {
-    const wildcardIndex = value.indexOf("*");
-    if (wildcardIndex !== -1 && wildcardIndex !== value.length - 1) {
-      return {
-        prefix: value,
-        error: {
-          message: "Wildcard (*) can only appear at the end of a term",
-          position: wildcardIndex,
-          length: 1,
-        },
-      };
-    }
-
-    // Check for multiple wildcards in unquoted strings
-    const wildcardCount = (value.match(/\*/g) || []).length;
-    if (wildcardCount > 1) {
-      const secondWildcardIndex = value.indexOf("*", value.indexOf("*") + 1);
-      return {
-        prefix: value,
-        error: {
-          message: "Only one wildcard (*) is allowed per term",
-          position: secondWildcardIndex,
-          length: 1,
-        },
-      };
-    }
-  } else {
-    // For quoted strings, only check for multiple trailing wildcards
-    if (value.endsWith("**")) {
-      return {
-        prefix: value,
-        error: {
-          message: "Only one trailing wildcard (*) is allowed",
-          position: value.length,
-          length: 1,
-        },
-      };
-    }
-  }
-
-  // Get prefix by removing trailing wildcard if present
-  const prefix = value.endsWith("*") ? value.slice(0, -1) : value;
-  return { prefix };
-};
-
 const parsePrimary = (
   stream: TokenStream
 ): ParseResult<FirstPassExpression> => {
@@ -189,36 +135,13 @@ const parsePrimary = (
       // Handle field:value patterns
       if (isFieldValuePattern(value)) {
         const [field, rawValue] = extractFieldValue(value);
-        const { prefix, error } = processWildcardPattern(rawValue, isQuoted);
-
-        if (error) {
-          throw {
-            message: error.message,
-            position: token.position + field.length + 1 + error.position, // Adjust position for field name and colon
-            length: error.length,
-          };
-        }
-
-        // Return as string if quoted with internal wildcards
-        if (isQuoted && !rawValue.endsWith("*") && rawValue.includes("*")) {
-          return {
-            result: {
-              type: "STRING",
-              value: value,
-              quoted: true,
-              position: token.position,
-              length: token.length,
-            },
-            stream: advanceStream(stream),
-          };
-        }
 
         // If it has a trailing wildcard
         if (rawValue.endsWith("*")) {
           return {
             result: {
               type: "WILDCARD",
-              prefix: `${field}:${prefix}`,
+              prefix: `${field}:${rawValue.slice(0, -1)}`,
               quoted: isQuoted,
               position: token.position,
               length: token.length,
@@ -229,36 +152,11 @@ const parsePrimary = (
       }
 
       // Handle regular terms with wildcards
-      const { prefix, error } = processWildcardPattern(value, isQuoted);
-
-      if (error) {
-        throw {
-          message: error.message,
-          position: token.position + error.position,
-          length: error.length,
-        };
-      }
-
-      // Return as string if quoted with internal wildcards
-      if (isQuoted && !value.endsWith("*") && value.includes("*")) {
-        return {
-          result: {
-            type: "STRING",
-            value,
-            quoted: true,
-            position: token.position,
-            length: token.length,
-          },
-          stream: advanceStream(stream),
-        };
-      }
-
-      // If it has a trailing wildcard
       if (value.endsWith("*")) {
         return {
           result: {
             type: "WILDCARD",
-            prefix,
+            prefix: value.slice(0, -1),
             quoted: isQuoted,
             position: token.position,
             length: token.length,

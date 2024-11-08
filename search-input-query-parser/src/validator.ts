@@ -13,19 +13,41 @@ export type ValidationError = {
 
 const reservedWords = new Set(["AND", "OR"]);
 
-// Helper function to validate wildcard patterns
+// Validates wildcard patterns
 const validateWildcard = (
   expr: StringLiteral | WildcardPattern,
   errors: ValidationError[]
 ) => {
-  if (expr.type === "STRING") {
-    const starCount = (expr.value.match(/\*/g) || []).length;
+  const value = expr.type === "STRING" ? expr.value : expr.prefix + "*";
+  const starCount = (value.match(/\*/g) || []).length;
+  const isQuoted = expr.quoted;
+
+  // For unquoted strings
+  if (!isQuoted) {
+    const firstStar = value.indexOf("*");
     if (starCount > 1) {
-      const firstStar = expr.value.indexOf("*");
-      const secondStar = expr.value.indexOf("*", firstStar + 1);
+      const secondStar = value.indexOf("*", firstStar + 1);
       errors.push({
-        message: "Only one wildcard (*) is allowed per term",
+        message: "Only one trailing wildcard (*) is allowed",
         position: expr.position + secondStar,
+        length: 1,
+      });
+    } 
+    if ((firstStar !== -1 && firstStar !== value.length - 1) && !value.endsWith("**")) {
+      errors.push({
+        message: "Wildcard (*) can only appear at the end of a term",
+        position: expr.position + firstStar,
+        length: 1,
+      });
+    }
+  }
+  // For quoted strings
+  else {
+    // Handle multiple wildcards or internal wildcards in quoted strings
+    if (value.endsWith("**")) {
+      errors.push({
+        message: "Only one trailing wildcard (*) is allowed",
+        position: expr.position + value.length + 1,
         length: 1,
       });
     }
@@ -37,13 +59,13 @@ const validateString = (
   expr: StringLiteral | WildcardPattern,
   errors: ValidationError[]
 ) => {
-  // For wildcard patterns, additional validation if needed
-  if (expr.type === "WILDCARD") {
-    return; // Basic wildcard validation is handled at parse time
-  }
-
-  // Check for multiple wildcards in the string
+  // Validate wildcard usage
   validateWildcard(expr, errors);
+
+  // For wildcard patterns, no additional validation needed
+  if (expr.type === "WILDCARD") {
+    return;
+  }
 
   // Handle STRING type
   // Check for empty field values
@@ -92,7 +114,10 @@ const validateString = (
   }
 
   // Handle standalone reserved words (not in field:value pattern)
-  if (!expr.value.includes(":") && reservedWords.has(expr.value)) {
+  if (
+    !expr.value.includes(":") &&
+    reservedWords.has(expr.value.toUpperCase())
+  ) {
     errors.push({
       message: `${expr.value} is a reserved word`,
       position: expr.position,

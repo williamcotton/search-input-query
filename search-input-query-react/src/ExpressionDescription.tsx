@@ -53,9 +53,8 @@ const expressionToEnglish = (
         expr.left,
         depth + 1
       )}\n${expressionToEnglish(expr.right, depth + 1)}`;
-
-    default:
-      return "";
+    case "WILDCARD":
+      return `${indent}Wildcard search for "${expr.prefix}*"`;
   }
 };
 

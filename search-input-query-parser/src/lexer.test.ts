@@ -410,4 +410,30 @@ describe("Lexer", () => {
       ]);
     });
   });
+
+  describe("Adjacent Terms Validation", () => {
+    test("rejects adjacent quoted strings", () => {
+      expect(() => tokenize('"test""test"')).toThrow(
+        "Invalid syntax: Missing operator or whitespace between terms"
+      );
+      expect(() => tokenize('"test""test""test"')).toThrow(
+        "Invalid syntax: Missing operator or whitespace between terms"
+      );
+    });
+
+    test("rejects adjacent terms without operators", () => {
+      expect(() => tokenize('test"test"')).toThrow(
+        "Invalid syntax: Missing operator or whitespace between terms"
+      );
+      expect(() => tokenize('"test"test')).toThrow(
+        "Invalid syntax: Missing operator or whitespace between terms"
+      );
+    });
+
+    test("accepts properly separated terms", () => {
+      expect(() => tokenize('"test" "test"')).not.toThrow();
+      expect(() => tokenize('"test" AND "test"')).not.toThrow();
+      expect(() => tokenize('"test" OR "test"')).not.toThrow();
+    });
+  });
 });

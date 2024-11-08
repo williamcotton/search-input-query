@@ -277,7 +277,39 @@ export const tokenize = (input: string): Token[] => {
       }
 
       case '"': {
+        // Before tokenizing a quoted string, check if it's adjacent to a previous quoted string
+        if (tokens.length > 0) {
+          const prevToken = tokens[tokens.length - 1];
+          const prevEnd = prevToken.position + prevToken.length;
+          // If there's no whitespace between this quote and the previous token's end
+          if (
+            position === prevEnd &&
+            (prevToken.type === TokenType.QUOTED_STRING ||
+              prevToken.type === TokenType.STRING)
+          ) {
+            throw {
+              message:
+                "Invalid syntax: Missing operator or whitespace between terms",
+              position: position,
+              length: 1,
+            };
+          }
+        }
+
         const [token, newPos] = tokenizeQuotedString(input, position);
+        // After tokenizing, check if the next character is not a whitespace or special character
+        if (
+          newPos < input.length &&
+          !isWhitespace(input[newPos]) &&
+          !isSpecialChar(input[newPos])
+        ) {
+          throw {
+            message:
+              "Invalid syntax: Missing operator or whitespace between terms",
+            position: newPos,
+            length: 1,
+          };
+        }
         tokens.push(token);
         position = newPos;
         break;

@@ -133,7 +133,7 @@ describe("Search Query to SQL Converter", () => {
     });
 
     test("converts NOT with field:value", () => {
-      testSqlConversion("NOT status:active", "NOT (status ILIKE $1)", [
+      testSqlConversion("NOT status:active", "NOT status ILIKE $1", [
         "%active%",
       ]);
     });

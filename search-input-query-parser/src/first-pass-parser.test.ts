@@ -15,6 +15,7 @@ describe("First Pass Parser", () => {
       expect(result).toEqual({
         type: "STRING",
         value: "boots",
+        quoted: false,
         position: 0,
         length: 5,
       });
@@ -26,6 +27,7 @@ describe("First Pass Parser", () => {
         type: "STRING",
         value: "red shoes",
         position: 0,
+        quoted: true,
         length: 11,
       });
     });
@@ -35,6 +37,7 @@ describe("First Pass Parser", () => {
       expect(result).toEqual({
         type: "STRING",
         value: "color:red",
+        quoted: false,
         position: 0,
         length: 9,
       });
@@ -45,6 +48,7 @@ describe("First Pass Parser", () => {
       expect(result).toEqual({
         type: "STRING",
         value: "status:in progress",
+        quoted: true,
         position: 0,
         length: 20,
       });
@@ -61,12 +65,14 @@ describe("First Pass Parser", () => {
           left: {
             type: "STRING",
             value: "a",
+            quoted: false,
             position: 0,
             length: 1,
           },
           right: {
             type: "STRING",
             value: "b",
+            quoted: false,
             position: 2,
             length: 1,
           },
@@ -76,6 +82,7 @@ describe("First Pass Parser", () => {
         right: {
           type: "STRING",
           value: "c",
+          quoted: false,
           position: 7,
           length: 1,
         },
@@ -93,12 +100,14 @@ describe("First Pass Parser", () => {
           left: {
             type: "STRING",
             value: "a",
+            quoted: false,
             position: 0,
             length: 1,
           },
           right: {
             type: "STRING",
             value: "b",
+            quoted: false,
             position: 6,
             length: 1,
           },
@@ -108,6 +117,7 @@ describe("First Pass Parser", () => {
         right: {
           type: "STRING",
           value: "c",
+          quoted: false,
           position: 11,
           length: 1,
         },
@@ -125,12 +135,14 @@ describe("First Pass Parser", () => {
           left: {
             type: "STRING",
             value: "a",
+            quoted: false,
             position: 1,
             length: 1,
           },
           right: {
             type: "STRING",
             value: "b",
+            quoted: false,
             position: 6,
             length: 1,
           },
@@ -140,6 +152,7 @@ describe("First Pass Parser", () => {
         right: {
           type: "STRING",
           value: "c",
+          quoted: false,
           position: 13,
           length: 1,
         },
@@ -157,6 +170,7 @@ describe("First Pass Parser", () => {
         expression: {
           type: "STRING",
           value: "test",
+          quoted: false,
           position: 4,
           length: 4,
         },
@@ -172,6 +186,7 @@ describe("First Pass Parser", () => {
         expression: {
           type: "STRING",
           value: "test",
+          quoted: false,
           position: 5,
           length: 4,
         },
@@ -187,6 +202,7 @@ describe("First Pass Parser", () => {
         expression: {
           type: "STRING",
           value: "status:active",
+          quoted: false,
           position: 4,
           length: 13,
         },
@@ -202,6 +218,7 @@ describe("First Pass Parser", () => {
         left: {
           type: "STRING",
           value: "boots",
+          quoted: false,
           position: 0,
           length: 5,
         },
@@ -210,6 +227,7 @@ describe("First Pass Parser", () => {
           expression: {
             type: "STRING",
             value: "leather",
+            quoted: false,
             position: 14,
             length: 7,
           },
@@ -228,6 +246,7 @@ describe("First Pass Parser", () => {
       expect(result).toEqual({
         type: "STRING",
         value: "boots",
+        quoted: false,
         position: 1,
         length: 5,
       });
@@ -240,12 +259,14 @@ describe("First Pass Parser", () => {
         left: {
           type: "STRING",
           value: "a",
+          quoted: false,
           position: 2,
           length: 1,
         },
         right: {
           type: "STRING",
           value: "b",
+          quoted: false,
           position: 7,
           length: 1,
         },
@@ -261,6 +282,7 @@ describe("First Pass Parser", () => {
         left: {
           type: "STRING",
           value: "a",
+          quoted: false,
           position: 1,
           length: 1,
         },
@@ -269,12 +291,14 @@ describe("First Pass Parser", () => {
           left: {
             type: "STRING",
             value: "b",
+            quoted: false,
             position: 8,
             length: 1,
           },
           right: {
             type: "STRING",
             value: "c",
+            quoted: false,
             position: 13,
             length: 1,
           },
@@ -327,12 +351,14 @@ describe("First Pass Parser", () => {
           left: {
             type: "STRING",
             value: "a",
+            quoted: false,
             position: 1,
             length: 1,
           },
           right: {
             type: "STRING",
             value: "b",
+            quoted: false,
             position: 7,
             length: 1,
           },
@@ -344,6 +370,7 @@ describe("First Pass Parser", () => {
           left: {
             type: "STRING",
             value: "c",
+            quoted: false,
             position: 14,
             length: 1,
           },
@@ -352,12 +379,14 @@ describe("First Pass Parser", () => {
             left: {
               type: "STRING",
               value: "d",
+              quoted: false,
               position: 21,
               length: 1,
             },
             right: {
               type: "STRING",
               value: "e",
+              quoted: false,
               position: 26,
               length: 1,
             },
@@ -381,6 +410,7 @@ describe("First Pass Parser", () => {
         left: {
           type: "STRING",
           value: "category:winter boots",
+          quoted: true,
           position: 0,
           length: 23,
         },
@@ -389,12 +419,14 @@ describe("First Pass Parser", () => {
           left: {
             type: "STRING",
             value: "color:black",
+            quoted: false,
             position: 29,
             length: 11,
           },
           right: {
             type: "STRING",
             value: "color:brown",
+            quoted: false,
             position: 44,
             length: 11,
           },

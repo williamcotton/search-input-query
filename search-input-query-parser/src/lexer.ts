@@ -42,6 +42,7 @@ const isSpecialChar = (char: string): boolean => /[\s"():()]/.test(char);
 const isEscapeChar = (char: string): boolean => char === "\\";
 const isQuoteChar = (char: string): boolean => char === '"';
 const isWhitespace = (char: string): boolean => /\s/.test(char);
+const isWildcard = (char: string): boolean => char === "*";
 
 const readUntil = (
   input: string,
@@ -50,8 +51,18 @@ const readUntil = (
 ): string => {
   let result = "";
   let pos = start;
-  while (pos < input.length && predicate(input[pos])) {
-    result += input[pos];
+  let foundWildcard = false;
+
+  while (pos < input.length) {
+    const char = input[pos];
+    // Once we find a wildcard, include everything up to the next whitespace or special char
+    if (isWildcard(char)) {
+      foundWildcard = true;
+    }
+    if (isWhitespace(char) || (!foundWildcard && !predicate(char))) {
+      break;
+    }
+    result += char;
     pos++;
   }
   return result;
@@ -79,17 +90,31 @@ const tokenizeQuotedString = (
 
   while (pos < input.length) {
     const char = input[pos];
+
     if (isQuoteChar(char)) {
+      // Read any wildcards after the closing quote
+      pos++; // Move past closing quote
+      let wildcards = "";
+      while (pos < input.length && isWildcard(input[pos])) {
+        wildcards += "*";
+        pos++;
+        length++;
+      }
+      if (wildcards) {
+        value += wildcards;
+      }
+
       return [
         {
           type: TokenType.QUOTED_STRING,
           value,
           position,
-          length: length, // Include both quotes in length
+          length,
         },
-        pos + 1,
+        pos,
       ];
     }
+
     if (isEscapeChar(char) && pos + 1 < input.length) {
       value += input[pos + 1];
       length += 2; // Count both escape char and escaped char
@@ -125,9 +150,9 @@ const tokenizeString = (input: string, position: number): [Token, number] => {
       const [quotedToken, newPos] = tokenizeQuotedString(input, pos);
       return [
         {
-          type: TokenType.STRING,
+          type: TokenType.QUOTED_STRING,
           value: `${fieldPart}:${quotedToken.value}`,
-          position,
+          position: position,
           length: newPos - position,
         },
         newPos,
@@ -141,6 +166,19 @@ const tokenizeString = (input: string, position: number): [Token, number] => {
       (char) => !isWhitespace(char) && !isSpecialChar(char)
     );
     pos += valuePart.length;
+
+    // Check for wildcard after the value
+    if (pos < input.length && isWildcard(input[pos])) {
+      return [
+        {
+          type: TokenType.STRING,
+          value: `${fieldPart}:${valuePart}*`,
+          position,
+          length: pos + 1 - position,
+        },
+        pos + 1,
+      ];
+    }
 
     return [
       {
@@ -171,6 +209,24 @@ const tokenizeString = (input: string, position: number): [Token, number] => {
         value: upperFieldPart,
         position,
         length: fieldPart.length,
+      },
+      pos,
+    ];
+  }
+
+  // Read any wildcards after the string
+  let wildcards = "";
+  while (pos < input.length && isWildcard(input[pos])) {
+    wildcards += "*";
+    pos++;
+  }
+  if (wildcards) {
+    return [
+      {
+        type: TokenType.STRING,
+        value: fieldPart + wildcards,
+        position,
+        length: pos - position,
       },
       pos,
     ];

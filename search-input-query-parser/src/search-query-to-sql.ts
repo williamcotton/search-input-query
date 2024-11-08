@@ -96,30 +96,54 @@ const searchTermToSql = (
 
   switch (state.searchType) {
     case "paradedb": {
-      // For paradedb, we need to escape special characters and handle multiple columns
-      const escapedValue = escapeParadeDBChars(value);
-      const conditions = state.searchableColumns.map(
-        (column) => `${column} @@@ ${paramName}`
-      );
-      const sql =
-        conditions.length === 1
-          ? conditions[0]
-          : `(${conditions.join(" OR ")})`;
-      return [sql, addValue(newState, escapedValue)];
+      // For paradedb, handle wildcards appropriately
+      const hasWildcard = value.endsWith('*');
+      const baseValue = hasWildcard ? value.slice(0, -1) : value;
+      // If it was already a quoted string, add wildcard inside the quotes
+      if (baseValue.startsWith('"') && baseValue.endsWith('"')) {
+        const innerValue = baseValue.slice(1, -1);
+        const escapedValue = escapeParadeDBChars(innerValue);
+        const queryValue = hasWildcard ? `"${escapedValue}"*` : `"${escapedValue}"`;
+        const conditions = state.searchableColumns.map(
+          (column) => `${column} @@@ ${paramName}`
+        );
+        const sql =
+          conditions.length === 1
+            ? conditions[0]
+            : `(${conditions.join(" OR ")})`;
+        return [sql, addValue(newState, queryValue)];
+      } else {
+        // For unquoted strings, wrap in quotes and add wildcard inside if needed
+        const escapedValue = escapeParadeDBChars(baseValue);
+        const queryValue = hasWildcard ? `"${escapedValue}"*` : `"${escapedValue}"`;
+        const conditions = state.searchableColumns.map(
+          (column) => `${column} @@@ ${paramName}`
+        );
+        const sql =
+          conditions.length === 1
+            ? conditions[0]
+            : `(${conditions.join(" OR ")})`;
+        return [sql, addValue(newState, queryValue)];
+      }
     }
     case "tsvector": {
+      // For tsvector, treat wildcards as prefix matching
+      const hasWildcard = value.endsWith('*');
+      const baseValue = hasWildcard ? value.slice(0, -1) : value;
       const langConfig = state.language || "english";
       const conditions = state.searchableColumns.map(
         (column) => `to_tsvector('${langConfig}', ${column})`
       );
       const tsvectorCondition = `(${conditions.join(
         " || "
-      )}) @@ plainto_tsquery('${langConfig}', ${paramName})`;
-      return [tsvectorCondition, addValue(newState, value)];
+      )}) @@ ${hasWildcard ? "to_tsquery" : "plainto_tsquery"}('${langConfig}', ${paramName})`;
+      return [tsvectorCondition, addValue(newState, hasWildcard ? `${baseValue}:*` : baseValue)];
     }
     default: {
       // ILIKE behavior
-      const escapedTerm = escapeSpecialChars(value);
+      const hasWildcard = value.endsWith('*');
+      const baseValue = hasWildcard ? value.slice(0, -1) : value;
+      const escapedTerm = escapeSpecialChars(baseValue);
       const conditions = state.searchableColumns.map(
         (column) => `${column} ILIKE ${paramName}`
       );
@@ -203,17 +227,31 @@ const fieldValueToSql = (
 
   if (state.searchType === "paradedb") {
     // Handle different field types for ParadeDB
+    const hasWildcard = value.endsWith("*");
+    const baseValue = hasWildcard ? value.slice(0, -1) : value;
+
     switch (schema?.type) {
       case "date":
-        return [
-          `${field} @@@ '"' || ${paramName} || '"'`,
-          addValue(newState, value),
-        ];
+        return [`${field} @@@ '"${value}"'`, newState];
       case "number":
-        return [`${field} @@@ ${paramName}`, addValue(newState, Number(value))];
+        return [`${field} @@@ '${value}'`, newState];
       default:
-        const escapedValue = escapeParadeDBChars(value);
-        return [`${field} @@@ ${paramName}`, addValue(newState, escapedValue)];
+        // If it was already a quoted string, add wildcard inside the quotes
+        if (baseValue.startsWith('"') && baseValue.endsWith('"')) {
+          const innerValue = baseValue.slice(1, -1);
+          const escapedValue = escapeParadeDBChars(innerValue);
+          const queryValue = hasWildcard
+            ? `"${escapedValue}"*`
+            : `"${escapedValue}"`;
+          return [`${field} @@@ ${paramName}`, addValue(newState, queryValue)];
+        } else {
+          // For unquoted strings, wrap in quotes and add wildcard inside if needed
+          const escapedValue = escapeParadeDBChars(baseValue);
+          const queryValue = hasWildcard
+            ? `"${escapedValue}"*`
+            : `"${escapedValue}"`;
+          return [`${field} @@@ ${paramName}`, addValue(newState, queryValue)];
+        }
     }
   }
 
@@ -228,13 +266,19 @@ const fieldValueToSql = (
         state.searchType === "tsvector" &&
         state.searchableColumns.includes(field)
       ) {
+        const hasWildcard = value.endsWith("*");
+        const baseValue = hasWildcard ? value.slice(0, -1) : value;
         const langConfig = state.language || "english";
         return [
-          `to_tsvector('${langConfig}', ${field}) @@ plainto_tsquery('${langConfig}', ${paramName})`,
-          addValue(newState, value),
+          `to_tsvector('${langConfig}', ${field}) @@ ${
+            hasWildcard ? "to_tsquery" : "plainto_tsquery"
+          }('${langConfig}', ${paramName})`,
+          addValue(newState, hasWildcard ? `${baseValue}:*` : baseValue),
         ];
       } else {
-        const escapedValue = escapeSpecialChars(value);
+        const hasWildcard = value.endsWith("*");
+        const baseValue = hasWildcard ? value.slice(0, -1) : value;
+        const escapedValue = escapeSpecialChars(baseValue);
         return [
           `${field} ILIKE ${paramName}`,
           addValue(newState, `%${escapedValue}%`),

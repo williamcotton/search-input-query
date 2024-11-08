@@ -9,6 +9,7 @@ export type PositionLength = {
 export type StringLiteral = {
   readonly type: "STRING";
   readonly value: string;
+  readonly quoted: boolean;
 } & PositionLength;
 
 export type AndExpression = {
@@ -107,6 +108,7 @@ const parsePrimary = (
           value: token.value,
           position: token.position,
           length: token.length,
+          quoted: token.type === TokenType.QUOTED_STRING,
         },
         stream: advanceStream(stream),
       };

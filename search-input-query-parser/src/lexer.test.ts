@@ -115,7 +115,7 @@ describe("Lexer", () => {
         { type: TokenType.STRING, value: "field:or", position: 0, length: 8 },
       ]);
       expect(tokenize('field:"AND"')).toEqual([
-        { type: TokenType.STRING, value: "field:AND", position: 0, length: 11 },
+        { type: TokenType.QUOTED_STRING, value: "field:AND", position: 0, length: 11 },
       ]);
     });
 
@@ -186,7 +186,7 @@ describe("Lexer", () => {
     test("handles field:value pairs with quoted values", () => {
       expect(tokenize('status:"in progress"')).toEqual([
         {
-          type: TokenType.STRING,
+          type: TokenType.QUOTED_STRING,
           value: "status:in progress",
           position: 0,
           length: 20,
@@ -227,7 +227,7 @@ describe("Lexer", () => {
 
       expect(tokenize('field:"quoted value"')).toEqual([
         {
-          type: TokenType.STRING,
+          type: TokenType.QUOTED_STRING,
           value: "field:quoted value",
           position: 0,
           length: 20,
@@ -274,7 +274,7 @@ describe("Lexer", () => {
         tokenize('category:"winter boots" AND (color:black OR color:brown)')
       ).toEqual([
         {
-          type: TokenType.STRING,
+          type: TokenType.QUOTED_STRING,
           value: "category:winter boots",
           position: 0,
           length: 23,

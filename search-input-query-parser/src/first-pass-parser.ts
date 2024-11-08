@@ -87,11 +87,14 @@ const parseInValues = (stream: TokenStream): ParseResult<string[]> => {
   let currentStream = stream;
 
   // Expect opening parenthesis
-  currentStream = expectToken(
-    currentStream,
-    TokenType.LPAREN,
-    "Expected '(' after IN"
-  );
+  if (currentToken(currentStream).type !== TokenType.LPAREN) {
+    throw {
+      message: "Expected '(' after IN",
+      position: currentToken(currentStream).position,
+      length: 1,
+    };
+  }
+  currentStream = advanceStream(currentStream);
 
   while (true) {
     const token = currentToken(currentStream);
@@ -101,12 +104,26 @@ const parseInValues = (stream: TokenStream): ParseResult<string[]> => {
         throw {
           message: "IN operator requires at least one value",
           position: token.position,
-          length: token.length,
+          length: 1,
         };
       }
       return {
         result: values,
         stream: advanceStream(currentStream),
+      };
+    }
+
+    if (
+      token.type === TokenType.EOF ||
+      (token.type !== TokenType.STRING &&
+        token.type !== TokenType.QUOTED_STRING &&
+        token.type !== TokenType.NUMBER &&
+        token.type !== TokenType.COMMA)
+    ) {
+      throw {
+        message: "Expected ',' or ')' after IN value",
+        position: token.position,
+        length: 1,
       };
     }
 
@@ -122,22 +139,18 @@ const parseInValues = (stream: TokenStream): ParseResult<string[]> => {
       if (nextToken.type === TokenType.COMMA) {
         currentStream = advanceStream(currentStream);
         continue;
-      } else if (nextToken.type === TokenType.RPAREN) {
-        continue;
-      } else {
-        throw {
-          message: "Expected ',' or ')' after IN value",
-          position: nextToken.position,
-          length: nextToken.length,
-        };
       }
+      if (nextToken.type === TokenType.RPAREN) {
+        continue;
+      }
+      throw {
+        message: "Expected ',' or ')' after IN value",
+        position: nextToken.position,
+        length: 1,
+      };
     }
 
-    throw {
-      message: "Invalid value in IN expression",
-      position: token.position,
-      length: token.length,
-    };
+    currentStream = advanceStream(currentStream);
   }
 };
 

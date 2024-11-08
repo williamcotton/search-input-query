@@ -104,7 +104,6 @@ const validateFieldValue = (
 ): void => {
   switch (expr.type) {
     case "IN": {
-      // Validate field name
       if (!allowedFields.has(expr.field.toLowerCase())) {
         errors.push({
           message: `Invalid field: "${expr.field}"`,
@@ -113,14 +112,40 @@ const validateFieldValue = (
         });
       }
 
-      // Get schema and validate values
+      // Get schema for type validation
       const schema = schemas.get(expr.field.toLowerCase());
-      validateInExpression(
-        expr.values,
-        schema,
-        expr.position + expr.field.length + 3, // +3 for ":IN"
-        errors
-      );
+      if (schema) {
+        expr.values.forEach((value, index) => {
+          switch (schema.type) {
+            case "number":
+              if (isNaN(Number(value))) {
+                errors.push({
+                  message: "Invalid numeric value",
+                  position:
+                    expr.position +
+                    expr.field.length +
+                    4 +
+                    index * (value.length + 1),
+                  length: value.length,
+                });
+              }
+              break;
+            case "date":
+              if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                errors.push({
+                  message: "Invalid date format",
+                  position:
+                    expr.position +
+                    expr.field.length +
+                    3 +
+                    index * (value.length + 1),
+                  length: value.length,
+                });
+              }
+              break;
+          }
+        });
+      }
       break;
     }
 

@@ -887,11 +887,20 @@ describe("Search Query Parser", () => {
         schemas
       );
       expect(invalidNumResult.type).toBe("SEARCH_QUERY_ERROR");
-      expect((invalidNumResult as SearchQueryError).errors).toContainEqual(
-        expect.objectContaining({
-          message: "Invalid numeric value in IN expression",
-        })
-      );
+
+      // should be fully equal to [{"length": 3, "message": "Invalid numeric value", "position": 9}, {"length": 3, "message": "Invalid numeric value", "position": 13}]
+      expect((invalidNumResult as SearchQueryError).errors).toStrictEqual([
+        {
+          message: "Invalid numeric value",
+          position: 9,
+          length: 3,
+        },
+        {
+          message: "Invalid numeric value",
+          position: 13,
+          length: 3,
+        },
+      ]);
 
       // Invalid date IN
       // const invalidDateResult = parseSearchInputQuery(
@@ -933,7 +942,7 @@ describe("Search Query Parser", () => {
           {
             message: "Expected ',' or ')' after IN value",
             position: 5,
-            length: 0,
+            length: 1,
           },
         ]);
       });
@@ -954,7 +963,7 @@ describe("Search Query Parser", () => {
           {
             message: "Expected ',' or ')' after IN value",
             position: 17,
-            length: 7,
+            length: 1,
           },
         ]);
       });

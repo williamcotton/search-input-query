@@ -16,8 +16,17 @@ const expressionToEnglish = (
     case "SEARCH_TERM":
       return `${indent}Search for "${expr.value}"`;
 
-    case "FIELD_VALUE":
-      return `${indent}${expr.field.value} contains "${expr.value.value}"`;
+    case "FIELD_VALUE": {
+      const value = expr.value.value;
+      // Check if the value ends with a wildcard
+      if (value.endsWith("*")) {
+        return `${indent}${expr.field.value} starts with "${value.slice(
+          0,
+          -1
+        )}"`;
+      }
+      return `${indent}${expr.field.value} is "${value}"`;
+    }
 
     case "RANGE": {
       const fieldName = expr.field.value;
@@ -53,8 +62,9 @@ const expressionToEnglish = (
         expr.left,
         depth + 1
       )}\n${expressionToEnglish(expr.right, depth + 1)}`;
+
     case "WILDCARD":
-      return `${indent}Wildcard search for "${expr.prefix}*"`;
+      return `${indent}starts with "${expr.prefix}"`;
   }
 };
 

@@ -128,7 +128,7 @@ const wildcardPatternToSql = (
         conditions.length === 1
           ? conditions[0]
           : `(${conditions.join(" OR ")})`;
-      return [sql, addValue(newState, `%${escapedPrefix}%`)];
+      return [sql, addValue(newState, `${escapedPrefix}%`)];
     }
   }
 };
@@ -238,7 +238,7 @@ const fieldValueToSql = (
           `${field} ILIKE ${paramName}`,
           addValue(
             newState,
-            hasWildcard ? `%${escapedValue}%` : `%${escapedValue}%`
+            hasWildcard ? `${escapedValue}%` : `%${escapedValue}%`
           ),
         ];
       }

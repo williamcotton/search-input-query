@@ -1,6 +1,6 @@
 import { FirstPassExpression } from "./first-pass-parser";
 import { parseRangeExpression } from "./parse-range-expression";
-import { FieldSchema, Expression } from "./parser";
+import { FieldSchema, Expression, Value } from "./parser";
 
 // Helper to transform FirstPassExpression into Expression
 export const transformToExpression = (
@@ -116,5 +116,38 @@ export const transformToExpression = (
         position: expr.position,
         length: expr.length,
       };
+
+    case "IN": {
+      const schema = schemas.get(expr.field.toLowerCase());
+      const transformedValues: Value[] = expr.values.map((value, index) => {
+        let transformedValue = value;
+
+        // Handle type conversion based on schema
+        if (schema?.type === "number") {
+          transformedValue = String(Number(value));
+        }
+
+        return {
+          type: "VALUE",
+          value: transformedValue,
+          position:
+            expr.position + expr.field.length + 3 + index * (value.length + 1), // +3 for ":IN"
+          length: value.length,
+        };
+      });
+
+      return {
+        type: "IN",
+        field: {
+          type: "FIELD",
+          value: expr.field,
+          position: expr.position,
+          length: expr.field.length,
+        },
+        values: transformedValues,
+        position: expr.position,
+        length: expr.length,
+      };
+    }
   }
 };

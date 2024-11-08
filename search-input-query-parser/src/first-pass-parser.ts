@@ -35,12 +35,19 @@ export type NotExpression = {
   readonly expression: FirstPassExpression;
 } & PositionLength;
 
+export type InExpression = {
+  readonly type: "IN";
+  readonly field: string;
+  readonly values: string[];
+} & PositionLength;
+
 export type FirstPassExpression =
   | StringLiteral
   | WildcardPattern
   | AndExpression
   | OrExpression
-  | NotExpression;
+  | NotExpression
+  | InExpression;
 
 // Parser functions
 interface ParseResult<T> {
@@ -73,6 +80,65 @@ const isFieldValuePattern = (value: string): boolean => {
 const extractFieldValue = (value: string): [string, string] => {
   const [field, ...valueParts] = value.split(":");
   return [field, valueParts.join(":")];
+};
+
+const parseInValues = (stream: TokenStream): ParseResult<string[]> => {
+  const values: string[] = [];
+  let currentStream = stream;
+
+  // Expect opening parenthesis
+  currentStream = expectToken(
+    currentStream,
+    TokenType.LPAREN,
+    "Expected '(' after IN"
+  );
+
+  while (true) {
+    const token = currentToken(currentStream);
+
+    if (token.type === TokenType.RPAREN) {
+      if (values.length === 0) {
+        throw {
+          message: "IN operator requires at least one value",
+          position: token.position,
+          length: token.length,
+        };
+      }
+      return {
+        result: values,
+        stream: advanceStream(currentStream),
+      };
+    }
+
+    if (
+      token.type === TokenType.STRING ||
+      token.type === TokenType.QUOTED_STRING ||
+      token.type === TokenType.NUMBER
+    ) {
+      values.push(token.value);
+      currentStream = advanceStream(currentStream);
+
+      const nextToken = currentToken(currentStream);
+      if (nextToken.type === TokenType.COMMA) {
+        currentStream = advanceStream(currentStream);
+        continue;
+      } else if (nextToken.type === TokenType.RPAREN) {
+        continue;
+      } else {
+        throw {
+          message: "Expected ',' or ')' after IN value",
+          position: nextToken.position,
+          length: nextToken.length,
+        };
+      }
+    }
+
+    throw {
+      message: "Invalid value in IN expression",
+      position: token.position,
+      length: token.length,
+    };
+  }
 };
 
 const parsePrimary = (
@@ -131,6 +197,27 @@ const parsePrimary = (
     case TokenType.QUOTED_STRING: {
       const { value } = token;
       const isQuoted = token.type === TokenType.QUOTED_STRING;
+
+      // Check for field:IN pattern
+      if (value.includes(":")) {
+        const [field, remainder] = value.split(":");
+        if (remainder.toUpperCase() === "IN") {
+          const nextStream = advanceStream(stream);
+          const inValuesResult = parseInValues(nextStream);
+
+          return {
+            result: {
+              type: "IN",
+              field,
+              values: inValuesResult.result,
+              position: token.position,
+              length:
+                token.length + inValuesResult.stream.position - nextStream.position,
+            },
+            stream: inValuesResult.stream,
+          };
+        }
+      }
 
       // Handle field:value patterns
       if (isFieldValuePattern(value)) {

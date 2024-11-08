@@ -8,6 +8,9 @@ export enum TokenType {
   OR = "OR",
   NOT = "NOT",
   EOF = "EOF",
+  IN = "IN",
+  COMMA = "COMMA",
+  NUMBER = "NUMBER",
 }
 
 export interface Token {
@@ -38,7 +41,7 @@ export const advanceStream = (stream: TokenStream): TokenStream => ({
   position: stream.position + 1,
 });
 
-const isSpecialChar = (char: string): boolean => /[\s"():()]/.test(char);
+const isSpecialChar = (char: string): boolean => /[\s"():(),]/.test(char);
 const isEscapeChar = (char: string): boolean => char === "\\";
 const isQuoteChar = (char: string): boolean => char === '"';
 const isWhitespace = (char: string): boolean => /\s/.test(char);
@@ -132,6 +135,22 @@ const tokenizeQuotedString = (
 const tokenizeString = (input: string, position: number): [Token, number] => {
   let pos = position;
 
+  if (/^-?\d+(\.\d+)?/.test(input.slice(pos))) {
+    const match = input.slice(pos).match(/^-?\d+(\.\d+)?/);
+    if (match) {
+      const numValue = match[0];
+      return [
+        {
+          type: TokenType.NUMBER,
+          value: numValue,
+          position: pos,
+          length: numValue.length,
+        },
+        pos + numValue.length,
+      ];
+    }
+  }
+
   // Read until we hit a special character, whitespace, or colon
   const fieldPart = readUntil(
     input,
@@ -214,6 +233,19 @@ const tokenizeString = (input: string, position: number): [Token, number] => {
     ];
   }
 
+  // Handle IN operator (case-insensitive)
+  if (upperFieldPart === "IN") {
+    return [
+      {
+        type: TokenType.IN,
+        value: "IN",
+        position,
+        length: fieldPart.length,
+      },
+      pos,
+    ];
+  }
+
   // Read any wildcards after the string
   let wildcards = "";
   while (pos < input.length && isWildcard(input[pos])) {
@@ -284,6 +316,7 @@ export const tokenize = (input: string): Token[] => {
           // If there's no whitespace between this quote and the previous token's end
           if (
             position === prevEnd &&
+            prevToken.type !== TokenType.COMMA &&
             (prevToken.type === TokenType.QUOTED_STRING ||
               prevToken.type === TokenType.STRING)
           ) {
@@ -330,6 +363,17 @@ export const tokenize = (input: string): Token[] => {
         tokens.push({
           type: TokenType.RPAREN,
           value: ")",
+          position,
+          length: 1,
+        });
+        position++;
+        break;
+      }
+
+      case ",": {
+        tokens.push({
+          type: TokenType.COMMA,
+          value: ",",
           position,
           length: 1,
         });

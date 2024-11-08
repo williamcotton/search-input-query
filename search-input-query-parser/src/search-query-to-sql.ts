@@ -301,6 +301,41 @@ const rangeToSql = (
   ];
 };
 
+const inExpressionToSql = (
+  field: string,
+  values: string[],
+  state: SqlState
+): [string, SqlState] => {
+  let currentState = state;
+  const paramNames: string[] = [];
+
+  // Generate parameter placeholders and collect values
+  for (const value of values) {
+    const [paramName, newState] = nextParam(currentState);
+    paramNames.push(paramName);
+    currentState = addValue(newState, value);
+  }
+
+  const schema = state.schemas.get(field.toLowerCase());
+
+  if (state.searchType === "paradedb") {
+    const escapedValues = values.map((v) => escapeParadeDBChars(v));
+    const queryValue = escapedValues.map((v) => `"${v}"`).join(" OR ");
+    return [`${field} @@@ '${queryValue}'`, currentState];
+  }
+
+  // Handle type casting for different field types
+  const typeCast = schema?.type === "date" ? "::date" : "";
+  const paramCast = schema?.type === "date" ? "::date" : "";
+
+  return [
+    `${field}${typeCast} IN (${paramNames
+      .map((p) => p + paramCast)
+      .join(", ")})`,
+    currentState,
+  ];
+};
+
 /**
  * Convert a binary operation (AND/OR) to SQL
  */
@@ -328,6 +363,13 @@ const expressionToSql = (
 
     case "WILDCARD":
       return wildcardPatternToSql(expr, state);
+
+    case "IN":
+      return inExpressionToSql(
+        expr.field.value,
+        expr.values.map((v) => v.value),
+        state
+      );
 
     case "FIELD_VALUE":
       return fieldValueToSql(expr.field.value, expr.value.value, state);

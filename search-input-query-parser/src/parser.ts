@@ -69,6 +69,12 @@ type Not = {
   readonly expression: Expression;
 } & PositionLength;
 
+type InExpression = {
+  readonly type: "IN";
+  readonly field: Field;
+  readonly values: Value[];
+} & PositionLength;
+
 type Expression =
   | SearchTerm
   | WildcardPattern
@@ -76,7 +82,8 @@ type Expression =
   | RangeExpression
   | And
   | Or
-  | Not;
+  | Not
+  | InExpression;
 
 type SearchQuery = {
   readonly type: "SEARCH_QUERY";
@@ -109,6 +116,12 @@ const stringify = (expr: Expression): string => {
       return `(${stringify(expr.left)} AND ${stringify(expr.right)})`;
     case "OR":
       return `(${stringify(expr.left)} OR ${stringify(expr.right)})`;
+    case "IN": {
+      const values = expr.values.map((v: { value: string }) => 
+        v.value.includes(" ") ? `"${v.value}"` : v.value
+      ).join(",");
+      return `${expr.field.value}:IN(${values})`;
+    }
   }
 };
 
@@ -203,5 +216,6 @@ export {
   type RangeOperator,
   type RangeExpression,
   type WildcardPattern,
+  type Value,
   stringify,
 };

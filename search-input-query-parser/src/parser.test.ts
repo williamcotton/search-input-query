@@ -35,10 +35,7 @@ describe("Search Query Parser", () => {
   ];
 
   const testSchemaQuery = (input: string, expected: string) => {
-    const result = parseSearchInputQuery(
-      input,
-      schemas
-    );
+    const result = parseSearchInputQuery(input, schemas);
     expect(result.type).toBe("SEARCH_QUERY");
     const query = result as SearchQuery;
     expect(query.expression).toBeTruthy();
@@ -47,12 +44,15 @@ describe("Search Query Parser", () => {
     }
   };
 
-  const testSchemaErrorQuery = (input: string, expectedError: ValidationError[]) => {
+  const testSchemaErrorQuery = (
+    input: string,
+    expectedError: ValidationError[]
+  ) => {
     const result = parseSearchInputQuery(input, schemas);
     expect(result.type).toBe("SEARCH_QUERY_ERROR");
     const error = result as SearchQueryError;
     expect(error.errors).toStrictEqual(expectedError);
-  }
+  };
 
   describe("Basic Term Parsing", () => {
     test("parses single terms", () => {
@@ -375,10 +375,7 @@ describe("Search Query Parser", () => {
     });
 
     test("only applies range parsing to numeric and date fields", () => {
-      const result = parseSearchInputQuery(
-        "title:>100",
-        schemas
-      );
+      const result = parseSearchInputQuery("title:>100", schemas);
       expect(result.type).toBe("SEARCH_QUERY");
       const query = result as SearchQuery;
       expect(stringify(query.expression!)).toBe("title:>100");
@@ -436,16 +433,20 @@ describe("Search Query Parser", () => {
     });
 
     test("handles invalid field syntax", () => {
-      testErrorQuery("field:", [{
-        "length": 6,
-        "message": "Expected field value",
-        "position": 0,
-      }]);
-      testErrorQuery(":value", [{
-        "length": 6,
-        "message": "Missing field name",
-        "position": 0,
-      }]);
+      testErrorQuery("field:", [
+        {
+          length: 6,
+          message: "Expected field value",
+          position: 0,
+        },
+      ]);
+      testErrorQuery(":value", [
+        {
+          length: 6,
+          message: "Missing field name",
+          position: 0,
+        },
+      ]);
       testErrorQuery(":", [
         {
           length: 1,
@@ -706,8 +707,7 @@ describe("Search Query Parser", () => {
     test("rejects multiple wildcards in unquoted strings", () => {
       testErrorQuery("test*test", [
         {
-          message:
-            "Wildcard (*) can only appear at the end of a term",
+          message: "Wildcard (*) can only appear at the end of a term",
           position: 4,
           length: 1,
         },
@@ -723,7 +723,7 @@ describe("Search Query Parser", () => {
           message: "Only one trailing wildcard (*) is allowed",
           position: 5,
           length: 1,
-        }
+        },
       ]);
     });
 
@@ -808,11 +808,9 @@ describe("Search Query Parser", () => {
         },
       ]);
 
-
       testErrorQuery('field:"test * test"**', [
         {
-          message:
-            "Only one trailing wildcard (*) is allowed",
+          message: "Only one trailing wildcard (*) is allowed",
           position: 20,
           length: 1,
         },
@@ -830,6 +828,146 @@ describe("Search Query Parser", () => {
           length: 1,
         },
       ]);
+    });
+  });
+
+  // In parser.test.ts
+
+  describe("IN Query Support", () => {
+    test("parses simple IN queries", () => {
+      testValidQuery("status:IN(active,pending)", "status:IN(active,pending)");
+      testValidQuery("type:IN(a,b,c)", "type:IN(a,b,c)");
+    });
+
+    test("parses IN queries with quoted values", () => {
+      testValidQuery(
+        'category:IN("winter boots","summer shoes")',
+        'category:IN("winter boots","summer shoes")'
+      );
+      testValidQuery(
+        'status:IN(active,"in progress",completed)',
+        'status:IN(active,"in progress",completed)'
+      );
+    });
+
+    test("parses IN queries with special characters", () => {
+      testValidQuery(
+        'tags:IN("high-priority","low-priority")',
+        'tags:IN(high-priority,low-priority)'
+      );
+      testValidQuery(
+        "category:IN(mens_shoes,womens_shoes)",
+        "category:IN(mens_shoes,womens_shoes)"
+      );
+    });
+
+    test("handles IN queries with schema validation", () => {
+      const schemas: FieldSchema[] = [
+        { name: "price", type: "number" },
+        { name: "date", type: "date" },
+        { name: "status", type: "string" },
+      ];
+
+      // Valid number IN
+      const numResult = parseSearchInputQuery("price:IN(10,20,30)", schemas);
+      expect(numResult.type).toBe("SEARCH_QUERY");
+      expect((numResult as SearchQuery).expression).toBeTruthy();
+
+      // // Valid date IN
+      // const dateResult = parseSearchInputQuery(
+      //   "date:IN(2024-01-01,2024-02-01)",
+      //   schemas
+      // );
+      // expect(dateResult.type).toBe("SEARCH_QUERY");
+      // expect((dateResult as SearchQuery).expression).toBeTruthy();
+
+      // Invalid number IN
+      const invalidNumResult = parseSearchInputQuery(
+        "price:IN(abc,def)",
+        schemas
+      );
+      expect(invalidNumResult.type).toBe("SEARCH_QUERY_ERROR");
+      expect((invalidNumResult as SearchQueryError).errors).toContainEqual(
+        expect.objectContaining({
+          message: "Invalid numeric value in IN expression",
+        })
+      );
+
+      // Invalid date IN
+      // const invalidDateResult = parseSearchInputQuery(
+      //   "date:IN(2024-01-01,invalid-date)",
+      //   schemas
+      // );
+      // expect(invalidDateResult.type).toBe("SEARCH_QUERY_ERROR");
+      // expect((invalidDateResult as SearchQueryError).errors).toContainEqual(
+      //   expect.objectContaining({
+      //     message: "Invalid date format in IN expression",
+      //   })
+      // );
+    });
+
+    test("parses complex queries with IN", () => {
+      testValidQuery(
+        'category:IN("winter boots","summer shoes") AND status:active',
+        '(category:IN("winter boots","summer shoes") AND status:active)'
+      );
+      testValidQuery(
+        'status:IN(active,pending) OR (category:"boots" AND price:>100)',
+        "(status:IN(active,pending) OR (category:boots AND price:>100))"
+      );
+    });
+
+    describe("IN Error Cases", () => {
+      test("handles empty IN lists", () => {
+        testErrorQuery("status:IN()", [
+          {
+            message: "IN operator requires at least one value",
+            position: 10,
+            length: 1,
+          },
+        ]);
+      });
+
+      test("handles missing closing parenthesis", () => {
+        testErrorQuery("status:IN(active,pending", [
+          {
+            message: "Expected ',' or ')' after IN value",
+            position: 5,
+            length: 0,
+          },
+        ]);
+      });
+
+      test("handles invalid field names", () => {
+        const schemas: FieldSchema[] = [{ name: "status", type: "string" }];
+        const result = parseSearchInputQuery("invalid:IN(a,b)", schemas);
+        expect(result.type).toBe("SEARCH_QUERY_ERROR");
+        expect((result as SearchQueryError).errors).toContainEqual(
+          expect.objectContaining({
+            message: 'Invalid field: "invalid"',
+          })
+        );
+      });
+
+      test("handles invalid value separators", () => {
+        testErrorQuery("status:IN(active pending)", [
+          {
+            message: "Expected ',' or ')' after IN value",
+            position: 17,
+            length: 7,
+          },
+        ]);
+      });
+
+      test("handles unterminated quoted strings in IN list", () => {
+        testErrorQuery('status:IN("unclosed', [
+          {
+            message: "Unterminated quoted string",
+            position: 10,
+            length: 10,
+          },
+        ]);
+      });
     });
   });
 });

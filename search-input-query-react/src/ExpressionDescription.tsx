@@ -65,6 +65,11 @@ const expressionToEnglish = (
 
     case "WILDCARD":
       return `${indent}starts with "${expr.prefix}"`;
+
+    case "IN": {
+      const values = expr.values.map((v) => `"${v.value}"`).join(", ");
+      return `${indent}${expr.field.value} is in [${values}]`;
+    }
   }
 };
 

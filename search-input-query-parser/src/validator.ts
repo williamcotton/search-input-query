@@ -4,6 +4,8 @@ import {
   WildcardPattern,
 } from "./first-pass-parser";
 
+import { FieldSchema } from "./parser";
+
 // Validation error type
 export type ValidationError = {
   message: string;

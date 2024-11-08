@@ -65,6 +65,36 @@ const validateNumericComparison = (
   return validateNumber(value, valuePosition, errors);
 };
 
+const validateInExpression = (
+  values: string[],
+  schema: FieldSchema | undefined,
+  position: number,
+  errors: ValidationError[]
+): void => {
+  if (schema?.type === "date") {
+    for (const value of values) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        errors.push({
+          message: "Invalid date format in IN expression",
+          position,
+          length: value.length,
+        });
+      }
+    }
+  } else if (schema?.type === "number") {
+    for (const value of values) {
+      if (isNaN(Number(value))) {
+        errors.push({
+          message: "Invalid numeric value in IN expression",
+          position,
+          length: value.length,
+        });
+      }
+    }
+  }
+};
+
+
 // Field validation helpers
 const validateFieldValue = (
   expr: FirstPassExpression,
@@ -73,6 +103,27 @@ const validateFieldValue = (
   schemas: Map<string, FieldSchema>
 ): void => {
   switch (expr.type) {
+    case "IN": {
+      // Validate field name
+      if (!allowedFields.has(expr.field.toLowerCase())) {
+        errors.push({
+          message: `Invalid field: "${expr.field}"`,
+          position: expr.position,
+          length: expr.field.length,
+        });
+      }
+
+      // Get schema and validate values
+      const schema = schemas.get(expr.field.toLowerCase());
+      validateInExpression(
+        expr.values,
+        schema,
+        expr.position + expr.field.length + 3, // +3 for ":IN"
+        errors
+      );
+      break;
+    }
+
     case "WILDCARD": {
       // For wildcard patterns, validate against field type constraints
       const schema = schemas.get(expr.prefix.toLowerCase());
@@ -235,6 +286,7 @@ export const validateExpressionFields = (
   switch (expr.type) {
     case "STRING":
     case "WILDCARD":
+    case "IN":
       validateFieldValue(expr, allowedFields, errors, schemas);
       break;
     case "AND":

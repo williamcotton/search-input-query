@@ -82,7 +82,10 @@ const extractFieldValue = (value: string): [string, string] => {
   return [field, valueParts.join(":")];
 };
 
-const parseInValues = (stream: TokenStream): ParseResult<string[]> => {
+const parseInValues = (
+  stream: TokenStream,
+  inValuePosition: number
+): ParseResult<string[]> => {
   const values: string[] = [];
   let currentStream = stream;
 
@@ -90,7 +93,7 @@ const parseInValues = (stream: TokenStream): ParseResult<string[]> => {
   if (currentToken(currentStream).type !== TokenType.LPAREN) {
     throw {
       message: "Expected '(' after IN",
-      position: currentToken(currentStream).position,
+      position: inValuePosition, // Use the position passed from the caller
       length: 1,
     };
   }
@@ -216,7 +219,9 @@ const parsePrimary = (
         const [field, remainder] = value.split(":");
         if (remainder.toUpperCase() === "IN") {
           const nextStream = advanceStream(stream);
-          const inValuesResult = parseInValues(nextStream);
+          const colonIndex = value.indexOf(":");
+          const inValuePosition = token.position + colonIndex + 2; // After field:IN
+          const inValuesResult = parseInValues(nextStream, inValuePosition);
 
           return {
             result: {

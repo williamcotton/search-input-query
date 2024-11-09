@@ -307,26 +307,32 @@ const inExpressionToSql = (
   state: SqlState
 ): [string, SqlState] => {
   let currentState = state;
-  const paramNames: string[] = [];
 
-  // Generate parameter placeholders and collect values
+  if (state.searchType === "paradedb") {
+    // For ParadeDB, keep individual parameters and concatenate with spaces
+    const paramNames: string[] = [];
+
+    for (const value of values) {
+      const [paramName, newState] = nextParam(currentState);
+      paramNames.push(paramName);
+      currentState = addValue(newState, value);
+    }
+
+    const concatExpr = paramNames.join(" || ' ' || ");
+    return [`${field} @@@ 'IN[' || ${concatExpr} || ']'`, currentState];
+  }
+
+  // For non-ParadeDB search types, use standard SQL IN clause
+  const paramNames: string[] = [];
+  const schema = state.schemas.get(field.toLowerCase());
+  const typeCast = schema?.type === "date" ? "::date" : "";
+  const paramCast = schema?.type === "date" ? "::date" : "";
+
   for (const value of values) {
     const [paramName, newState] = nextParam(currentState);
     paramNames.push(paramName);
     currentState = addValue(newState, value);
   }
-
-  const schema = state.schemas.get(field.toLowerCase());
-
-  if (state.searchType === "paradedb") {
-    const escapedValues = values.map((v) => escapeParadeDBChars(v));
-    const queryValue = escapedValues.map((v) => `"${v}"`).join(" OR ");
-    return [`${field} @@@ '${queryValue}'`, currentState];
-  }
-
-  // Handle type casting for different field types
-  const typeCast = schema?.type === "date" ? "::date" : "";
-  const paramCast = schema?.type === "date" ? "::date" : "";
 
   return [
     `${field}${typeCast} IN (${paramNames
@@ -335,6 +341,7 @@ const inExpressionToSql = (
     currentState,
   ];
 };
+
 
 /**
  * Convert a binary operation (AND/OR) to SQL

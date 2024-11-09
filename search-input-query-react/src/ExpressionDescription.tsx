@@ -64,6 +64,9 @@ const expressionToEnglish = (
       )}\n${expressionToEnglish(expr.right, depth + 1)}`;
 
     case "WILDCARD":
+      if (expr.prefix === "") {
+        return `${indent}Match all records`;
+      }
       return `${indent}starts with "${expr.prefix}"`;
 
     case "IN": {

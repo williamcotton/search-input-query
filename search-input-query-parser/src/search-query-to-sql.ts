@@ -136,6 +136,10 @@ const wildcardPatternToSql = (
   expr: WildcardPattern,
   state: SqlState
 ): [string, SqlState] => {
+  if (expr.prefix === "") {
+    return ["1=1", state];
+  }
+
   const [paramName, newState] = nextParam(state);
   const cleanedPrefix = cleanQuotedString(expr.prefix);
 

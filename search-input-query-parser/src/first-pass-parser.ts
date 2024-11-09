@@ -314,6 +314,20 @@ export const parseExpression = (
   stream: TokenStream,
   minPrecedence: number = 0
 ): ParseResult<FirstPassExpression> => {
+  const token = currentToken(stream);
+  if (token.type === TokenType.STRING && token.value === "*") {
+    return {
+      result: {
+        type: "WILDCARD",
+        prefix: "",
+        quoted: false,
+        position: token.position,
+        length: token.length,
+      },
+      stream: advanceStream(stream),
+    };
+  }
+
   let result = parsePrimary(stream);
 
   while (true) {

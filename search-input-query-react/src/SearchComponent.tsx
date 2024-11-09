@@ -114,7 +114,7 @@ const SearchComponent = () => {
 
       {/* Display search results */}
       {searchResults.length > 0 && (
-        <div className="search-results mt-4">
+        <div className="search-results">
           <h3>Search Results:</h3>
           <div className="results-grid">
             {searchResults.map((product) => (

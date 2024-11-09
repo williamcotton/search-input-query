@@ -207,4 +207,80 @@
       word-break: break-all;
     }
   }
+
+  .results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  .result-card {
+    background-color: #f5f5f5;
+    border-radius: 8px;
+    padding: 1rem;
+    transition: transform 0.2s ease;
+    text-align: left;
+  }
+
+  .result-card h4 {
+    margin: 0 0 0.5rem;
+    color: #333;
+  }
+
+  .result-card p {
+    margin: 0 0 1rem;
+    color: #666;
+    font-size: 0.9em;
+  }
+
+  .result-details {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .price {
+    font-weight: bold;
+    color: #2c5282;
+  }
+
+  .status {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8em;
+  }
+
+  .status-in-stock {
+    background-color: #C6F6D5;
+    color: #22543D;
+  }
+
+  .status-low-stock {
+    background-color: #FEEBC8;
+    color: #744210;
+  }
+
+  .status-out-of-stock {
+    background-color: #FED7D7;
+    color: #742A2A;
+  }
+
+  .result-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8em;
+    color: #666;
+  }
+
+  .category {
+    background-color: #E2E8F0;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+  }
+
+  .date {
+    color: #718096;
+  }
 }

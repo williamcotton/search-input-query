@@ -165,7 +165,7 @@ const wildcardPatternToSql = (
       // ILIKE behavior
       const escapedPrefix = escapeSpecialChars(cleanedPrefix);
       const conditions = state.searchableColumns.map(
-        (column) => `${column} ILIKE ${paramName}`
+        (column) => `lower(${column}) LIKE lower(${paramName})`
       );
       const sql =
         conditions.length === 1
@@ -214,11 +214,11 @@ const searchTermToSql = (
         addValue(newState, hasWildcard ? `${baseValue}:*` : baseValue),
       ];
     }
-    default: {
-      // ILIKE behavior
+    case "ilike": {
+      // Use lower() for case-insensitive search in SQLite
       const escapedTerm = escapeSpecialChars(baseValue);
       const conditions = state.searchableColumns.map(
-        (column) => `${column} ILIKE ${paramName}`
+        (column) => `lower(${column}) LIKE lower(${paramName})`
       );
       const sql =
         conditions.length === 1
@@ -294,7 +294,7 @@ const fieldValueToSql = (
       } else {
         const escapedValue = escapeSpecialChars(baseValue);
         return [
-          `${field} ILIKE ${paramName}`,
+          `lower(${field}) LIKE lower(${paramName})`,
           addValue(
             newState,
             hasWildcard ? `${escapedValue}%` : `%${escapedValue}%`

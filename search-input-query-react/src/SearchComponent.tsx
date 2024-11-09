@@ -11,6 +11,7 @@ import {
 import type { ValidationError } from "../../search-input-query-parser/src/validator";
 import { ExpressionDescription } from "./ExpressionDescription";
 import { SearchInputQuery } from "./SearchInputQuery";
+import { type Product, searchProducts } from "./db-service";
 
 // Define available fields and searchable columns
 const schemas: FieldSchema[] = [
@@ -33,7 +34,7 @@ const searchTypes: Array<{
   {
     value: "ilike",
     label: "ILIKE",
-    description: "Case-insensitive pattern matching using PostgreSQL ILIKE",
+    description: "Case-insensitive pattern matching using case insensitive LIKE",
   },
   {
     value: "tsvector",
@@ -57,28 +58,44 @@ const SearchComponent = () => {
   const [sqlSearchType, setSqlSearchType] = useState<SearchType>("ilike");
   const [errors, setErrors] = useState<ValidationError[]>([]);
   const [showSql, setShowSql] = useState(true);
+  const [searchResults, setSearchResults] = useState<Product[]>([]);
 
-  const handleSearchResult = (result: {
+  const handleSearchResult = async (result: {
     expression: Expression | null;
     parsedResult: string;
     errors: ValidationError[];
-  }) => {
+  }): Promise<void> => {
     setExpression(result.expression);
     setParsedResult(result.parsedResult);
     setErrors(result.errors);
 
     if (result.errors.length === 0 && result.expression) {
-      // Generate SQL query
-      const parseResult: SearchQuery = {
-        type: "SEARCH_QUERY",
-        expression: result.expression,
-      };
-      const sql = searchQueryToSql(parseResult, searchableColumns, schemas, {
-        searchType: sqlSearchType,
-      });
-      setSqlQuery(sql);
+      try {
+        // Generate SQL query
+        const parseResult: SearchQuery = {
+          type: "SEARCH_QUERY",
+          expression: result.expression,
+        };
+
+        const sql = searchQueryToSql(parseResult, searchableColumns, schemas, {
+          searchType: sqlSearchType,
+        });
+
+        setSqlQuery(sql);
+
+        // Execute the search query against the database
+        const results = await searchProducts(sql.text, sql.values);
+        setSearchResults(results);
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "An unknown error occurred";
+        setErrors([{ message: errorMessage, position: 0, length: 0 }]);
+        setSqlQuery(null);
+        setSearchResults([]);
+      }
     } else {
       setSqlQuery(null);
+      setSearchResults([]);
     }
   };
 
@@ -94,6 +111,38 @@ const SearchComponent = () => {
       </div>
 
       <SearchInputQuery schemas={schemas} onSearchResult={handleSearchResult} />
+
+      {/* Display search results */}
+      {searchResults.length > 0 && (
+        <div className="search-results mt-4">
+          <h3>Search Results:</h3>
+          <div className="results-grid">
+            {searchResults.map((product) => (
+              <div key={product.id} className="result-card">
+                <h4>{product.title}</h4>
+                <p>{product.description}</p>
+                <div className="result-details">
+                  <span className="price">${product.price.toFixed(2)}</span>
+                  <span
+                    className={`status status-${product.status.replace(
+                      /\s+/g,
+                      "-"
+                    )}`}
+                  >
+                    {product.status}
+                  </span>
+                </div>
+                <div className="result-meta">
+                  <span className="category">{product.category}</span>
+                  <span className="date">
+                    {new Date(product.date).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {errors.length > 0 && (
         <div className="error-container">
@@ -112,6 +161,7 @@ const SearchComponent = () => {
             <h3>Parsed Query:</h3>
             <code>{parsedResult}</code>
           </div>
+
           <div className="sql-toggle">
             <label className="toggle">
               <span className="toggle-label">Show SQL</span>
@@ -125,6 +175,7 @@ const SearchComponent = () => {
               </div>
             </label>
           </div>
+
           {showSql && sqlQuery && (
             <>
               <div className="search-type-selector">

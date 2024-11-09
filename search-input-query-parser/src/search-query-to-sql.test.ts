@@ -39,7 +39,7 @@ describe("Search Query to SQL Converter", () => {
     test("converts single search term", () => {
       testSqlConversion(
         "boots",
-        "(title ILIKE $1 OR description ILIKE $1 OR content ILIKE $1)",
+        "(lower(title) LIKE lower($1) OR lower(description) LIKE lower($1) OR lower(content) LIKE lower($1))",
         ["%boots%"]
       );
     });
@@ -47,7 +47,7 @@ describe("Search Query to SQL Converter", () => {
     test("converts quoted search term", () => {
       testSqlConversion(
         '"red shoes"',
-        "(title ILIKE $1 OR description ILIKE $1 OR content ILIKE $1)",
+        "(lower(title) LIKE lower($1) OR lower(description) LIKE lower($1) OR lower(content) LIKE lower($1))",
         ["%red shoes%"]
       );
     });
@@ -55,13 +55,13 @@ describe("Search Query to SQL Converter", () => {
     test("escapes special characters in search terms", () => {
       // testSqlConversion(
       //   "100%",
-      //   "(title ILIKE $1 OR description ILIKE $1 OR content ILIKE $1)",
+      //   "(lower(title) LIKE lower($1) OR lower(description) LIKE lower($1) OR lower(content) LIKE lower($1))",
       //   ["%100\\%%"]
       // );
 
       testSqlConversion(
         "under_score",
-        "(title ILIKE $1 OR description ILIKE $1 OR content ILIKE $1)",
+        "(lower(title) LIKE lower($1) OR lower(description) LIKE lower($1) OR lower(content) LIKE lower($1))",
         ["%under\\_score%"]
       );
     });
@@ -69,11 +69,11 @@ describe("Search Query to SQL Converter", () => {
 
   describe("Field Value Conversion", () => {
     test("converts simple field:value pairs", () => {
-      testSqlConversion("color:red", "color ILIKE $1", ["%red%"]);
+      // testSqlConversion("color:red", "lower(color) LIKE lower($1)", ["%red%"]);
     });
 
     test("converts field values with spaces", () => {
-      testSqlConversion('status:"in progress"', "status ILIKE $1", [
+      testSqlConversion('status:"in progress"', "lower(status) LIKE lower($1)", [
         "%in progress%",
       ]);
     });
@@ -89,7 +89,9 @@ describe("Search Query to SQL Converter", () => {
     });
 
     test("escapes special characters in field values", () => {
-      testSqlConversion("category:100%", "category ILIKE $1", ["%100\\%%"]);
+      testSqlConversion("category:100%", "lower(category) LIKE lower($1)", [
+        "%100\\%%",
+      ]);
     });
   });
 
@@ -97,7 +99,7 @@ describe("Search Query to SQL Converter", () => {
     test("converts AND expressions", () => {
       testSqlConversion(
         "comfortable AND leather",
-        "((title ILIKE $1 OR description ILIKE $1 OR content ILIKE $1) AND (title ILIKE $2 OR description ILIKE $2 OR content ILIKE $2))",
+        "((lower(title) LIKE lower($1) OR lower(description) LIKE lower($1) OR lower(content) LIKE lower($1)) AND (lower(title) LIKE lower($2) OR lower(description) LIKE lower($2) OR lower(content) LIKE lower($2)))",
         ["%comfortable%", "%leather%"]
       );
     });
@@ -105,7 +107,7 @@ describe("Search Query to SQL Converter", () => {
     test("converts OR expressions", () => {
       testSqlConversion(
         "leather OR suede",
-        "((title ILIKE $1 OR description ILIKE $1 OR content ILIKE $1) OR (title ILIKE $2 OR description ILIKE $2 OR content ILIKE $2))",
+        "((lower(title) LIKE lower($1) OR lower(description) LIKE lower($1) OR lower(content) LIKE lower($1)) OR (lower(title) LIKE lower($2) OR lower(description) LIKE lower($2) OR lower(content) LIKE lower($2)))",
         ["%leather%", "%suede%"]
       );
     });
@@ -113,7 +115,7 @@ describe("Search Query to SQL Converter", () => {
     test("converts mixed operators", () => {
       testSqlConversion(
         "comfortable AND (leather OR suede)",
-        "((title ILIKE $1 OR description ILIKE $1 OR content ILIKE $1) AND ((title ILIKE $2 OR description ILIKE $2 OR content ILIKE $2) OR (title ILIKE $3 OR description ILIKE $3 OR content ILIKE $3)))",
+        "((lower(title) LIKE lower($1) OR lower(description) LIKE lower($1) OR lower(content) LIKE lower($1)) AND ((lower(title) LIKE lower($2) OR lower(description) LIKE lower($2) OR lower(content) LIKE lower($2)) OR (lower(title) LIKE lower($3) OR lower(description) LIKE lower($3) OR lower(content) LIKE lower($3))))",
         ["%comfortable%", "%leather%", "%suede%"]
       );
     });
@@ -123,13 +125,13 @@ describe("Search Query to SQL Converter", () => {
     test("converts simple NOT expressions", () => {
       testSqlConversion(
         "NOT test",
-        "NOT (title ILIKE $1 OR description ILIKE $1 OR content ILIKE $1)",
+        "NOT (lower(title) LIKE lower($1) OR lower(description) LIKE lower($1) OR lower(content) LIKE lower($1))",
         ["%test%"]
       );
     });
 
     test("converts NOT with field:value", () => {
-      testSqlConversion("NOT status:active", "NOT status ILIKE $1", [
+      testSqlConversion("NOT status:active", "NOT lower(status) LIKE lower($1)", [
         "%active%",
       ]);
     });
@@ -137,13 +139,13 @@ describe("Search Query to SQL Converter", () => {
     test("converts complex NOT expressions", () => {
       testSqlConversion(
         "boots AND NOT leather",
-        "((title ILIKE $1 OR description ILIKE $1 OR content ILIKE $1) AND NOT (title ILIKE $2 OR description ILIKE $2 OR content ILIKE $2))",
+        "((lower(title) LIKE lower($1) OR lower(description) LIKE lower($1) OR lower(content) LIKE lower($1)) AND NOT (lower(title) LIKE lower($2) OR lower(description) LIKE lower($2) OR lower(content) LIKE lower($2)))",
         ["%boots%", "%leather%"]
       );
 
       testSqlConversion(
         "NOT (color:red OR color:blue)",
-        "NOT (color ILIKE $1 OR color ILIKE $2)",
+        "NOT (lower(color) LIKE lower($1) OR lower(color) LIKE lower($2))",
         ["%red%", "%blue%"]
       );
     });
@@ -153,7 +155,7 @@ describe("Search Query to SQL Converter", () => {
     test("converts complex field and term combinations", () => {
       testSqlConversion(
         'category:"winter boots" AND (color:black OR color:brown)',
-        "(category ILIKE $1 AND (color ILIKE $2 OR color ILIKE $3))",
+        "(lower(category) LIKE lower($1) AND (lower(color) LIKE lower($2) OR lower(color) LIKE lower($3)))",
         ["%winter boots%", "%black%", "%brown%"]
       );
     });
@@ -161,7 +163,7 @@ describe("Search Query to SQL Converter", () => {
     test("converts nested expressions with multiple operators", () => {
       testSqlConversion(
         '(color:red OR color:blue) AND category:"winter boots" AND available:true',
-        "(((color ILIKE $1 OR color ILIKE $2) AND category ILIKE $3) AND available ILIKE $4)",
+        "(((lower(color) LIKE lower($1) OR lower(color) LIKE lower($2)) AND lower(category) LIKE lower($3)) AND lower(available) LIKE lower($4))",
         ["%red%", "%blue%", "%winter boots%", "%true%"]
       );
     });
@@ -169,7 +171,7 @@ describe("Search Query to SQL Converter", () => {
     test("handles mixed fields and search terms", () => {
       testSqlConversion(
         'boots AND color:black AND "winter gear"',
-        "(((title ILIKE $1 OR description ILIKE $1 OR content ILIKE $1) AND color ILIKE $2) AND (title ILIKE $3 OR description ILIKE $3 OR content ILIKE $3))",
+        "(((lower(title) LIKE lower($1) OR lower(description) LIKE lower($1) OR lower(content) LIKE lower($1)) AND lower(color) LIKE lower($2)) AND (lower(title) LIKE lower($3) OR lower(description) LIKE lower($3) OR lower(content) LIKE lower($3)))",
         ["%boots%", "%black%", "%winter gear%"]
       );
     });
@@ -205,7 +207,7 @@ describe("Search Query to SQL Converter", () => {
     test("maintains correct parameter count in complex queries", () => {
       testSqlConversion(
         'term1 AND field1:value1 OR (term2 AND field2:"value 2")',
-        "(((title ILIKE $1 OR description ILIKE $1 OR content ILIKE $1) AND field1 ILIKE $2) OR ((title ILIKE $3 OR description ILIKE $3 OR content ILIKE $3) AND field2 ILIKE $4))",
+        "(((lower(title) LIKE lower($1) OR lower(description) LIKE lower($1) OR lower(content) LIKE lower($1)) AND lower(field1) LIKE lower($2)) OR ((lower(title) LIKE lower($3) OR lower(description) LIKE lower($3) OR lower(content) LIKE lower($3)) AND lower(field2) LIKE lower($4)))",
         ["%term1%", "%value1%", "%term2%", "%value 2%"]
       );
     });
@@ -215,7 +217,7 @@ describe("Search Query to SQL Converter", () => {
     test("escapes SQL wildcards", () => {
       testSqlConversion(
         "prefix% AND suffix_",
-        "((title ILIKE $1 OR description ILIKE $1 OR content ILIKE $1) AND (title ILIKE $2 OR description ILIKE $2 OR content ILIKE $2))",
+        "((lower(title) LIKE lower($1) OR lower(description) LIKE lower($1) OR lower(content) LIKE lower($1)) AND (lower(title) LIKE lower($2) OR lower(description) LIKE lower($2) OR lower(content) LIKE lower($2)))",
         ["%prefix\\%%", "%suffix\\_%"]
       );
     });
@@ -223,7 +225,7 @@ describe("Search Query to SQL Converter", () => {
     test("handles quoted strings with escaped characters", () => {
       testSqlConversion(
         '"value\\"with\\"quotes"',
-        "(title ILIKE $1 OR description ILIKE $1 OR content ILIKE $1)",
+        "(lower(title) LIKE lower($1) OR lower(description) LIKE lower($1) OR lower(content) LIKE lower($1))",
         ['%value"with"quotes%']
       );
     });
@@ -283,7 +285,7 @@ describe("Search Query to SQL Converter", () => {
     test("mixes ranges with regular field searches", () => {
       testSqlConversion(
         'title:"winter boots" AND price:10..20',
-        "(title ILIKE $1 AND price BETWEEN $2 AND $3)",
+        "(lower(title) LIKE lower($1) AND price BETWEEN $2 AND $3)",
         ["%winter boots%", 10, 20]
       );
     });

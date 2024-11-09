@@ -15,7 +15,8 @@ export function registerSearchQueryLanguage(monaco: Monaco) {
     tokenizer: {
       root: [
         // Logical operators (must come before field detection)
-        [/\b(AND|OR|NOT)\b/, "keyword"],
+        [/\b(AND|OR|NOT|IN)\b/, "keyword"],
+        [/(?<=:)\s*IN*/, "value"],
 
         // Invalid field patterns (must come before valid field patterns)
         [/[^a-zA-Z0-9_-]+(?=:)/, "field"], // Invalid field characters
@@ -28,6 +29,7 @@ export function registerSearchQueryLanguage(monaco: Monaco) {
         [/(?<=:)\s*-?\d+(\.\d+)?/, "number"], // Numbers after colon
         [/(?<=:)\s*\d{4}-\d{2}-\d{2}/, "date"], // Dates after colon
         [/(?<=:)\s*[a-zA-Z][a-zA-Z0-9_-]*/, "value"], // Plain values after colon
+        // Plain values after colon
 
         // Range operators
         [/\.\./, "operator"],
@@ -51,6 +53,9 @@ export function registerSearchQueryLanguage(monaco: Monaco) {
 
         // Whitespace
         [/\s+/, "white"],
+
+        // Comma for IN operator lists
+        [/,/, "delimiter"],
       ],
 
       string: [
@@ -82,6 +87,7 @@ export function registerSearchQueryLanguage(monaco: Monaco) {
       { token: "date", foreground: "#A71D5D" },
       { token: "identifier", foreground: "#080808" },
       { token: "@brackets", foreground: "#794938" },
+      { token: "delimiter", foreground: "#811F24" },
       { token: "text", foreground: "#080808" },
     ],
     colors: {

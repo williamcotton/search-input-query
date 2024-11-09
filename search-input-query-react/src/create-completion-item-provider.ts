@@ -99,6 +99,20 @@ export function createCompletionItemProvider(
               }));
               break;
 
+            case "string":
+              suggestions = [
+                {
+                  label: "IN",
+                  kind: monaco.languages.CompletionItemKind.Operator,
+                  insertText: "IN",
+                  documentation: {
+                    value: "IN operator for multiple values (e.g., IN(value1,value2))",
+                  },
+                  range,
+                },
+              ];
+              break;
+
             case "number":
               suggestions = [
                 {
@@ -134,6 +148,15 @@ export function createCompletionItemProvider(
                   },
                   range,
                 },
+                {
+                  label: "IN",
+                  kind: monaco.languages.CompletionItemKind.Operator,
+                  insertText: "IN",
+                  documentation: {
+                    value: "IN operator for multiple values (e.g., IN(value1,value2))",
+                  },
+                  range,
+                }
               ];
               break;
 

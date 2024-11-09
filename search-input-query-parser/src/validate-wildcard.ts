@@ -37,7 +37,7 @@ export const validateWildcard = (
     if (value.endsWith("**")) {
       errors.push({
         message: "Only one trailing wildcard (*) is allowed",
-        position: expr.position + value.length + 1,
+        position: expr.position + value.length - 1,
         length: 1,
       });
     }

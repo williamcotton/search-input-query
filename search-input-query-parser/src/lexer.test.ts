@@ -115,7 +115,7 @@ describe("Lexer", () => {
         { type: TokenType.STRING, value: "field:or", position: 0, length: 8 },
       ]);
       expect(tokenize('field:"AND"')).toEqual([
-        { type: TokenType.QUOTED_STRING, value: "field:AND", position: 0, length: 11 },
+        { type: TokenType.QUOTED_STRING, value: 'field:"AND"', position: 0, length: 11 },
       ]);
     });
 
@@ -137,7 +137,7 @@ describe("Lexer", () => {
       expect(tokenize('"red shoes"')).toEqual([
         {
           type: TokenType.QUOTED_STRING,
-          value: "red shoes",
+          value: '"red shoes"',
           position: 0,
           length: 11,
         },
@@ -148,7 +148,7 @@ describe("Lexer", () => {
       expect(tokenize('"Nike\\"Air"')).toEqual([
         {
           type: TokenType.QUOTED_STRING,
-          value: 'Nike"Air',
+          value: '"Nike\\"Air"',
           position: 0,
           length: 11,
         },
@@ -159,7 +159,7 @@ describe("Lexer", () => {
       expect(tokenize('"path\\\\to\\\\file"')).toEqual([
         {
           type: TokenType.QUOTED_STRING,
-          value: "path\\to\\file",
+          value: '"path\\\\to\\\\file"',
           position: 0,
           length: 16,
         },
@@ -187,7 +187,7 @@ describe("Lexer", () => {
       expect(tokenize('status:"in progress"')).toEqual([
         {
           type: TokenType.QUOTED_STRING,
-          value: "status:in progress",
+          value: 'status:"in progress"',
           position: 0,
           length: 20,
         },
@@ -228,7 +228,7 @@ describe("Lexer", () => {
       expect(tokenize('field:"quoted value"')).toEqual([
         {
           type: TokenType.QUOTED_STRING,
-          value: "field:quoted value",
+          value: 'field:"quoted value"',
           position: 0,
           length: 20,
         },
@@ -275,7 +275,7 @@ describe("Lexer", () => {
       ).toEqual([
         {
           type: TokenType.QUOTED_STRING,
-          value: "category:winter boots",
+          value: 'category:"winter boots"',
           position: 0,
           length: 23,
         },
@@ -317,7 +317,7 @@ describe("Lexer", () => {
         { type: TokenType.AND, value: "AND", position: 6, length: 3 },
         {
           type: TokenType.QUOTED_STRING,
-          value: "red shoes",
+          value: '"red shoes"',
           position: 10,
           length: 11,
         },
@@ -346,7 +346,7 @@ describe("Lexer", () => {
         { type: TokenType.NOT, value: "NOT", position: 0, length: 1 },
         {
           type: TokenType.QUOTED_STRING,
-          value: "red shoes",
+          value: '"red shoes"',
           position: 1,
           length: 11,
         },

@@ -24,10 +24,7 @@ describe("Search Query to SQL Converter", () => {
     expectedSql: string,
     expectedValues: any[]
   ) => {
-    const parsedQuery = parseSearchInputQuery(
-      query,
-      schemas
-    );
+    const parsedQuery = parseSearchInputQuery(query, schemas);
     expect(parsedQuery.type).toBe("SEARCH_QUERY");
     const result = searchQueryToSql(
       parsedQuery as SearchQuery,
@@ -189,7 +186,9 @@ describe("Search Query to SQL Converter", () => {
     });
 
     test("throws error for invalid query syntax", () => {
-      expect(() => searchStringToSql("AND", searchableColumns, schemas)).toThrow("Parse error");
+      expect(() =>
+        searchStringToSql("AND", searchableColumns, schemas)
+      ).toThrow("Parse error");
       expect(() =>
         searchStringToSql("field:", searchableColumns, schemas)
       ).toThrow("Parse error");
@@ -424,6 +423,78 @@ describe("Search Query to SQL Converter", () => {
         'title:"winter boots" AND price:>100',
         "(title @@@ $1 AND price @@@ '>' || $2)",
         ['"winter boots"', 100]
+      );
+    });
+    
+    test("handles simple quoted strings", () => {
+      testParadeDBConversion(
+        '"test phrase"',
+        "(title @@@ $1 OR description @@@ $1 OR content @@@ $1)",
+        ['"test phrase"']
+      );
+    });
+
+    test("handles quoted strings with wildcards", () => {
+      testParadeDBConversion(
+        '"test phrase*"',
+        "(title @@@ $1 OR description @@@ $1 OR content @@@ $1)",
+        ['"test phrase\\*\"']
+      );
+
+      testParadeDBConversion(
+        '"test phrase"*',
+        "(title @@@ $1 OR description @@@ $1 OR content @@@ $1)",
+        ['"test phrase"*']
+      );
+    });
+
+    test("handles field values with quoted strings", () => {
+      testParadeDBConversion('title:"test phrase"', "title @@@ $1", [
+        '"test phrase"',
+      ]);
+
+      testParadeDBConversion('title:"test phrase*"', "title @@@ $1", [
+        '"test phrase"*',
+      ]);
+    });
+
+    test("handles mixed quoted and unquoted terms", () => {
+      testParadeDBConversion(
+        'title:test title:"test and test" "test and test"',
+        "((title @@@ $1 AND title @@@ $2) AND (title @@@ $3 OR description @@@ $3 OR content @@@ $3))",
+        ['"test"', '"test and test"', '"test and test"']
+      );
+    });
+
+    test("handles IN expressions with quoted strings", () => {
+      testParadeDBConversion(
+        'status:IN("test one", "test two")',
+        "status @@@ 'IN[' || $1 || ' ' || $2 || ']'",
+        ["test one", "test two"]
+      );
+    });
+
+    test("handles numeric fields with quoted strings", () => {
+      testParadeDBConversion(
+        'price:>100 AND title:"expensive items"',
+        "(price @@@ '>' || $1 AND title @@@ $2)",
+        [100, '"expensive items"']
+      );
+    });
+
+    test("handles dates with quoted strings", () => {
+      testParadeDBConversion(
+        'date:2024-01-01 AND title:"new items"',
+        "(date @@@ '\"' || $1 || '\"' AND title @@@ $2)",
+        ["2024-01-01", '"new items"']
+      );
+    });
+
+    test("handles complex query with multiple field types", () => {
+      testParadeDBConversion(
+        'title:"test*" AND price:>100 AND status:IN("active", "pending")',
+        "((title @@@ $1 AND price @@@ '>' || $2) AND status @@@ 'IN[' || $3 || ' ' || $4 || ']')",
+        ['"test"*', 100, "active", "pending"]
       );
     });
   });

@@ -87,22 +87,28 @@ const tokenizeQuotedString = (
   input: string,
   position: number
 ): [Token, number] => {
-  let value = "";
-  let pos = position + 1; // Skip opening quote
+  let value = '"'; // Start with opening quote
+  let pos = position + 1; // Skip opening quote in input processing
   let length = 2; // Start with 2 for the quotes
 
   while (pos < input.length) {
     const char = input[pos];
 
     if (isQuoteChar(char)) {
+      // Add closing quote
+      value += '"';
+
+      // Move past closing quote
+      pos++;
+
       // Read any wildcards after the closing quote
-      pos++; // Move past closing quote
       let wildcards = "";
       while (pos < input.length && isWildcard(input[pos])) {
         wildcards += "*";
         pos++;
         length++;
       }
+
       if (wildcards) {
         value += wildcards;
       }
@@ -119,8 +125,8 @@ const tokenizeQuotedString = (
     }
 
     if (isEscapeChar(char) && pos + 1 < input.length) {
-      value += input[pos + 1];
-      length += 2; // Count both escape char and escaped char
+      value += input[pos] + input[pos + 1]; // Include escape char and escaped char
+      length += 2;
       pos += 2;
     } else {
       value += char;

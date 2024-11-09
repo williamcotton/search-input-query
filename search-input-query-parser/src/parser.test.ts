@@ -142,9 +142,9 @@ describe("Search Query Parser", () => {
     });
 
     test("handles special characters in field values", () => {
-      testValidQuery('brand:"Nike\\Air"', "brand:NikeAir");
-      testValidQuery('brand:"Nike\\"Air"', 'brand:Nike"Air');
-      testValidQuery('path:"C:\\\\Program Files"', "path:C:\\Program Files");
+      testValidQuery('brand:"Nike\\Air"', "brand:Nike\\Air");
+      testValidQuery('brand:"Nike\\"Air"', 'brand:Nike\\\"Air');
+      testValidQuery('path:"C:\\\\Program Files"', "path:C:\\\\Program Files");
       testValidQuery(
         'query:"SELECT * FROM table"',
         "query:SELECT * FROM table"
@@ -412,9 +412,9 @@ describe("Search Query Parser", () => {
 
       test("parses wildcards in quoted strings", () => {
         testValidQuery('"test * test"', '"test * test"');
-        testValidQuery('"test * test"*', '"test * test*"');
+        testValidQuery('"test * test"*', '"test * test"*');
         testValidQuery('field:"test * test"', "field:test * test");
-        testValidQuery('field:"test * test"*', "field:test * test*");
+        testValidQuery('field:"test * test"*', 'field:"test * test"*');
       });
     });
   });
@@ -853,7 +853,7 @@ describe("Search Query Parser", () => {
     test("parses IN queries with special characters", () => {
       testValidQuery(
         'tags:IN("high-priority","low-priority")',
-        'tags:IN(high-priority,low-priority)'
+        'tags:IN("high-priority","low-priority")'
       );
       testValidQuery(
         "category:IN(mens_shoes,womens_shoes)",

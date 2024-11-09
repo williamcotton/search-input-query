@@ -70,6 +70,49 @@ const escapeParadeDBChars = (value: string): string => {
   );
 };
 
+const stripQuotes = (value: string): string => {
+  if (value.startsWith('"') && value.endsWith('"')) {
+    return value.slice(1, -1);
+  }
+  return value;
+};
+
+const cleanQuotedString = (
+  value: string,
+  stripOuterQuotes: boolean = true
+): string => {
+  // First strip the outer quotes if requested
+  let cleaned = stripOuterQuotes ? stripQuotes(value) : value;
+
+  // Replace escaped quotes with regular quotes
+  cleaned = cleaned.replace(/\\"/g, '"');
+
+  // Clean up any remaining escape characters
+  cleaned = cleaned.replace(/\\\\/g, "\\");
+
+  return cleaned;
+};
+
+const isQuotedString = (value: string): boolean => {
+  return value.startsWith('"') && value.endsWith('"');
+};
+
+const prepareParadeDBString = (
+  value: string,
+  includeWildcard: boolean = false
+): string => {
+  // First clean up the string
+  const cleaned = cleanQuotedString(value);
+
+  // For ParadeDB, we need to:
+  // 1. Escape special characters (except wildcards)
+  // 2. Wrap in quotes
+  // 3. Add wildcard if needed
+  const escaped = escapeParadeDBChars(cleaned);
+  const result = `"${escaped}"`;
+  return includeWildcard ? `${result}*` : result;
+};
+
 // Create a new parameter placeholder and update state
 const nextParam = (state: SqlState): [string, SqlState] => {
   const paramName = `$${state.paramCounter}`;
@@ -94,11 +137,11 @@ const wildcardPatternToSql = (
   state: SqlState
 ): [string, SqlState] => {
   const [paramName, newState] = nextParam(state);
+  const cleanedPrefix = cleanQuotedString(expr.prefix);
 
   switch (state.searchType) {
     case "paradedb": {
-      const escapedPrefix = escapeParadeDBChars(expr.prefix);
-      const queryValue = `"${escapedPrefix}"*`;
+      const queryValue = prepareParadeDBString(cleanedPrefix, true);
       const conditions = state.searchableColumns.map(
         (column) => `${column} @@@ ${paramName}`
       );
@@ -116,11 +159,11 @@ const wildcardPatternToSql = (
       const tsvectorCondition = `(${conditions.join(
         " || "
       )}) @@ to_tsquery('${langConfig}', ${paramName})`;
-      return [tsvectorCondition, addValue(newState, `${expr.prefix}:*`)];
+      return [tsvectorCondition, addValue(newState, `${cleanedPrefix}:*`)];
     }
     default: {
       // ILIKE behavior
-      const escapedPrefix = escapeSpecialChars(expr.prefix);
+      const escapedPrefix = escapeSpecialChars(cleanedPrefix);
       const conditions = state.searchableColumns.map(
         (column) => `${column} ILIKE ${paramName}`
       );
@@ -141,11 +184,14 @@ const searchTermToSql = (
   state: SqlState
 ): [string, SqlState] => {
   const [paramName, newState] = nextParam(state);
+  const hasWildcard = value.endsWith("*");
+  const isQuoted = isQuotedString(value);
+  const cleanedValue = cleanQuotedString(value);
+  const baseValue = hasWildcard ? cleanedValue.slice(0, -1) : cleanedValue;
 
   switch (state.searchType) {
     case "paradedb": {
-      const escapedValue = escapeParadeDBChars(value);
-      const queryValue = `"${escapedValue}"`;
+      const queryValue = prepareParadeDBString(baseValue, hasWildcard);
       const conditions = state.searchableColumns.map(
         (column) => `${column} @@@ ${paramName}`
       );
@@ -160,13 +206,17 @@ const searchTermToSql = (
       const conditions = state.searchableColumns.map(
         (column) => `to_tsvector('${langConfig}', ${column})`
       );
-      const tsvectorCondition = `(${conditions.join(
-        " || "
-      )}) @@ plainto_tsquery('${langConfig}', ${paramName})`;
-      return [tsvectorCondition, addValue(newState, value)];
+      const tsvectorCondition = `(${conditions.join(" || ")}) @@ ${
+        hasWildcard ? "to_tsquery" : "plainto_tsquery"
+      }('${langConfig}', ${paramName})`;
+      return [
+        tsvectorCondition,
+        addValue(newState, hasWildcard ? `${baseValue}:*` : baseValue),
+      ];
     }
     default: {
-      const escapedTerm = escapeSpecialChars(value);
+      // ILIKE behavior
+      const escapedTerm = escapeSpecialChars(baseValue);
       const conditions = state.searchableColumns.map(
         (column) => `${column} ILIKE ${paramName}`
       );
@@ -174,7 +224,12 @@ const searchTermToSql = (
         conditions.length === 1
           ? conditions[0]
           : `(${conditions.join(" OR ")})`;
-      return [sql, addValue(newState, `%${escapedTerm}%`)];
+
+      if (hasWildcard) {
+        return [sql, addValue(newState, `${escapedTerm}%`)];
+      } else {
+        return [sql, addValue(newState, `%${escapedTerm}%`)];
+      }
     }
   }
 };
@@ -189,40 +244,46 @@ const fieldValueToSql = (
 ): [string, SqlState] => {
   const [paramName, newState] = nextParam(state);
   const schema = state.schemas.get(field.toLowerCase());
+  const hasWildcard = value.endsWith("*");
+  const cleanedValue = cleanQuotedString(value);
+  const baseValue = hasWildcard ? cleanedValue.slice(0, -1) : cleanedValue;
 
   if (state.searchType === "paradedb") {
-    // Handle different field types for ParadeDB
-    const hasWildcard = value.endsWith("*");
-    const baseValue = hasWildcard ? value.slice(0, -1) : value;
-
     switch (schema?.type) {
-      case "date":
-        return [`${field} @@@ '"${value}"'`, newState];
+      case "date": {
+        // Use parameter binding for dates
+        const [dateParam, dateState] = nextParam(state);
+        return [
+          `${field} @@@ '"' || ${dateParam} || '"'`,
+          addValue(dateState, baseValue),
+        ];
+      }
       case "number":
-        return [`${field} @@@ '${value}'`, newState];
+        return [`${field} @@@ '${baseValue}'`, newState];
       default: {
-        const escapedValue = escapeParadeDBChars(baseValue);
-        const queryValue = hasWildcard
-          ? `"${escapedValue}"*`
-          : `"${escapedValue}"`;
+        const queryValue = prepareParadeDBString(baseValue, hasWildcard);
         return [`${field} @@@ ${paramName}`, addValue(newState, queryValue)];
       }
     }
   }
 
-  // Handle other search types
+  // Rest of the function remains the same...
   switch (schema?.type) {
     case "date":
-      return [`${field}::date = ${paramName}::date`, addValue(newState, value)];
+      return [
+        `${field}::date = ${paramName}::date`,
+        addValue(newState, cleanedValue),
+      ];
     case "number":
-      return [`${field} = ${paramName}`, addValue(newState, Number(value))];
+      return [
+        `${field} = ${paramName}`,
+        addValue(newState, Number(cleanedValue)),
+      ];
     default:
       if (
         state.searchType === "tsvector" &&
         state.searchableColumns.includes(field)
       ) {
-        const hasWildcard = value.endsWith("*");
-        const baseValue = hasWildcard ? value.slice(0, -1) : value;
         const langConfig = state.language || "english";
         return [
           `to_tsvector('${langConfig}', ${field}) @@ ${
@@ -231,8 +292,6 @@ const fieldValueToSql = (
           addValue(newState, hasWildcard ? `${baseValue}:*` : baseValue),
         ];
       } else {
-        const hasWildcard = value.endsWith("*");
-        const baseValue = hasWildcard ? value.slice(0, -1) : value;
         const escapedValue = escapeSpecialChars(baseValue);
         return [
           `${field} ILIKE ${paramName}`,
@@ -307,12 +366,12 @@ const inExpressionToSql = (
   state: SqlState
 ): [string, SqlState] => {
   let currentState = state;
+  const cleanedValues = values.map((v) => cleanQuotedString(v));
 
   if (state.searchType === "paradedb") {
-    // For ParadeDB, keep individual parameters and concatenate with spaces
     const paramNames: string[] = [];
 
-    for (const value of values) {
+    for (const value of cleanedValues) {
       const [paramName, newState] = nextParam(currentState);
       paramNames.push(paramName);
       currentState = addValue(newState, value);
@@ -322,16 +381,18 @@ const inExpressionToSql = (
     return [`${field} @@@ 'IN[' || ${concatExpr} || ']'`, currentState];
   }
 
-  // For non-ParadeDB search types, use standard SQL IN clause
   const paramNames: string[] = [];
   const schema = state.schemas.get(field.toLowerCase());
   const typeCast = schema?.type === "date" ? "::date" : "";
   const paramCast = schema?.type === "date" ? "::date" : "";
 
-  for (const value of values) {
+  for (const value of cleanedValues) {
     const [paramName, newState] = nextParam(currentState);
     paramNames.push(paramName);
-    currentState = addValue(newState, value);
+    currentState = addValue(
+      newState,
+      schema?.type === "number" ? Number(value) : value
+    );
   }
 
   return [
@@ -341,7 +402,6 @@ const inExpressionToSql = (
     currentState,
   ];
 };
-
 
 /**
  * Convert a binary operation (AND/OR) to SQL

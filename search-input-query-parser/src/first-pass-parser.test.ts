@@ -25,7 +25,7 @@ describe("First Pass Parser", () => {
       const result = parseQuery('"red shoes"');
       expect(result).toEqual({
         type: "STRING",
-        value: "red shoes",
+        value: '"red shoes"',
         position: 0,
         quoted: true,
         length: 11,
@@ -47,7 +47,7 @@ describe("First Pass Parser", () => {
       const result = parseQuery('status:"in progress"');
       expect(result).toEqual({
         type: "STRING",
-        value: "status:in progress",
+        value: 'status:"in progress"',
         quoted: true,
         position: 0,
         length: 20,
@@ -409,7 +409,7 @@ describe("First Pass Parser", () => {
         type: "AND",
         left: {
           type: "STRING",
-          value: "category:winter boots",
+          value: 'category:"winter boots"',
           quoted: true,
           position: 0,
           length: 23,

@@ -100,9 +100,9 @@ type SearchQueryError = {
 const stringify = (expr: Expression): string => {
   switch (expr.type) {
     case "SEARCH_TERM":
-      return expr.value.includes(" ") ? `"${expr.value}"` : expr.value;
+      return expr.value;
     case "WILDCARD":
-      return expr.quoted ? `"${expr.prefix}*"` : `${expr.prefix}*`;
+      return `${expr.prefix}*`;
     case "FIELD_VALUE":
       return `${expr.field.value}:${expr.value.value}`;
     case "RANGE":
@@ -117,9 +117,7 @@ const stringify = (expr: Expression): string => {
     case "OR":
       return `(${stringify(expr.left)} OR ${stringify(expr.right)})`;
     case "IN": {
-      const values = expr.values.map((v: { value: string }) => 
-        v.value.includes(" ") ? `"${v.value}"` : v.value
-      ).join(",");
+      const values = expr.values.map((v: { value: string }) => v.value).join(",");
       return `${expr.field.value}:IN(${values})`;
     }
   }

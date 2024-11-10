@@ -29,6 +29,8 @@ export function createCompletionItemProvider(
         endColumn: wordUntilPosition.endColumn,
       };
 
+      console.log("wordUntilPosition", wordUntilPosition);
+
       const textUntilPosition = model.getValueInRange({
         startLineNumber: 1,
         startColumn: 1,
@@ -39,6 +41,9 @@ export function createCompletionItemProvider(
       // Get the current line's text
       const currentLineText = model.getLineContent(position.lineNumber);
 
+      const lastWord = currentLineText.split(/[\s]+/).pop();
+      const isAfterColon = lastWord?.includes(":");
+
       // Check if there's already a colon after the current word
       const hasColonAfter = currentLineText
         .substring(position.column - 1)
@@ -48,8 +53,7 @@ export function createCompletionItemProvider(
       const words = textUntilPosition.split(/[\s:]+/);
       const currentWord = words[words.length - 1].toLowerCase();
       const previousWord = words[words.length - 2]?.toLowerCase();
-      const isAfterColon = textUntilPosition.trimEnd().endsWith(":");
-
+      
       let suggestions: CompletionItem[] = [];
 
       // Suggest fields when not after a colon

@@ -35,6 +35,7 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
   const monacoRef = useRef<Monaco | null>(null);
   const [decorations, setDecorations] =
     useState<editor.IEditorDecorationsCollection | null>(null);
+  const [currentValue, setCurrentValue] = useState<string>("");
 
   const clearAllErrorDecorations = () => {
     const editor = editorRef.current;
@@ -128,6 +129,8 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
   };
 
   const handleSearch = (value: string) => {
+    setCurrentValue(value.replace(/[\n\r]/g, ''))
+
     clearAllErrorDecorations();
 
     if (!value.trim()) {
@@ -200,6 +203,7 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
   return (
     <div className="search-wrapper">
       <Editor
+        value={currentValue}
         height="2em"
         defaultLanguage="searchQuery"
         defaultValue=""

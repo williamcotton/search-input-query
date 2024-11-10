@@ -29,8 +29,6 @@ export function createCompletionItemProvider(
         endColumn: wordUntilPosition.endColumn,
       };
 
-      console.log("wordUntilPosition", wordUntilPosition);
-
       const textUntilPosition = model.getValueInRange({
         startLineNumber: 1,
         startColumn: 1,
@@ -53,7 +51,7 @@ export function createCompletionItemProvider(
       const words = textUntilPosition.split(/[\s:]+/);
       const currentWord = words[words.length - 1].toLowerCase();
       const previousWord = words[words.length - 2]?.toLowerCase();
-      
+
       let suggestions: CompletionItem[] = [];
 
       // Suggest fields when not after a colon

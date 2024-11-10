@@ -66,6 +66,11 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
     editorRef.current = editor;
     monacoRef.current = monaco;
 
+    monaco.editor.addKeybindingRule({
+      keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF,
+      command: null,
+    });
+
     // Register our custom language
     registerSearchQueryLanguage(monaco);
 

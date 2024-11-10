@@ -13,7 +13,6 @@ import { ExpressionDescription } from "./ExpressionDescription";
 import { SearchInputQuery } from "./SearchInputQuery";
 import { type Product, searchProducts } from "./db-service";
 
-// Define available fields and searchable columns
 const schemas: FieldSchema[] = [
   { name: "title", type: "string" },
   { name: "description", type: "string" },
@@ -34,7 +33,8 @@ const searchTypes: Array<{
   {
     value: "ilike",
     label: "ILIKE",
-    description: "Case-insensitive pattern matching using case insensitive LIKE",
+    description:
+      "Case-insensitive pattern matching using case insensitive LIKE",
   },
   {
     value: "tsvector",
@@ -59,6 +59,9 @@ const SearchComponent = () => {
   const [errors, setErrors] = useState<ValidationError[]>([]);
   const [showSql, setShowSql] = useState(true);
   const [searchResults, setSearchResults] = useState<Product[]>([]);
+  const [activeTab, setActiveTab] = useState<"results" | "technical">(
+    "results"
+  );
 
   const handleSearchResult = async (result: {
     expression: Expression | null;
@@ -71,7 +74,6 @@ const SearchComponent = () => {
 
     if (result.errors.length === 0 && result.expression) {
       try {
-        // Generate SQL query
         const parseResult: SearchQuery = {
           type: "SEARCH_QUERY",
           expression: result.expression,
@@ -83,9 +85,9 @@ const SearchComponent = () => {
 
         setSqlQuery(sql);
 
-        // Execute the search query against the database
         const results = await searchProducts(sql.text, sql.values);
         setSearchResults(results);
+
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : "An unknown error occurred";
@@ -99,23 +101,10 @@ const SearchComponent = () => {
     }
   };
 
-  return (
-    <div className="search-container">
-      <div className="available-fields">
-        Available fields:{" "}
-        {allowedFields.map((field) => (
-          <span key={field} className="field-badge">
-            {field}
-          </span>
-        ))}
-      </div>
-
-      <SearchInputQuery schemas={schemas} onSearchResult={handleSearchResult} />
-
-      {/* Display search results */}
+  const renderResultsTab = () => (
+    <div className="results-section">
       {searchResults.length > 0 && (
         <div className="search-results">
-          <h3>Search Results:</h3>
           <div className="results-grid">
             {searchResults.map((product) => (
               <div key={product.id} className="result-card">
@@ -143,20 +132,20 @@ const SearchComponent = () => {
           </div>
         </div>
       )}
-
-      {errors.length > 0 && (
-        <div className="error-container">
-          {errors.map((error, index) => (
-            <div key={index} className="error-message">
-              {error.message}
-            </div>
-          ))}
+      {searchResults.length === 0 && parsedResult && !errors.length && (
+        <div className="no-results">
+          <p>No results found</p>
         </div>
       )}
+    </div>
+  );
 
+  const renderTechnicalTab = () => (
+    <div className="technical-section">
       {parsedResult && !errors.length && (
-        <div className="result-container">
+        <>
           <ExpressionDescription expression={expression} />
+
           <div className="parsed-query">
             <h3>Parsed Query:</h3>
             <code>{parsedResult}</code>
@@ -191,7 +180,6 @@ const SearchComponent = () => {
                         onChange={(e) => {
                           const newSearchType = e.target.value as SearchType;
                           setSqlSearchType(newSearchType);
-                          // Regenerate SQL if we have a valid expression
                           if (expression) {
                             const parseResult: SearchQuery = {
                               type: "SEARCH_QUERY",
@@ -236,6 +224,59 @@ const SearchComponent = () => {
               </div>
             </>
           )}
+        </>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="search-container">
+      <div className="available-fields">
+        Available fields:{" "}
+        {allowedFields.map((field) => (
+          <span key={field} className="field-badge">
+            {field}
+          </span>
+        ))}
+      </div>
+
+      <SearchInputQuery schemas={schemas} onSearchResult={handleSearchResult} />
+
+      {errors.length > 0 && (
+        <div className="error-container">
+          {errors.map((error, index) => (
+            <div key={index} className="error-message">
+              {error.message}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {(searchResults.length > 0 || (parsedResult && !errors.length)) && (
+        <div className="tabs">
+          <ul className="tab-list">
+            <li>
+              <button
+                className={`tab ${activeTab === "results" ? "active" : ""}`}
+                onClick={() => setActiveTab("results")}
+              >
+                Results
+              </button>
+            </li>
+            <li>
+              <button
+                className={`tab ${activeTab === "technical" ? "active" : ""}`}
+                onClick={() => setActiveTab("technical")}
+              >
+                Technical Details
+              </button>
+            </li>
+          </ul>
+          <div className="tab-content">
+            {activeTab === "results"
+              ? renderResultsTab()
+              : renderTechnicalTab()}
+          </div>
         </div>
       )}
     </div>

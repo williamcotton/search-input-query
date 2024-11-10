@@ -199,7 +199,6 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
 
   return (
     <div className="search-wrapper">
-      <label className="sr-only">Search Query</label>
       <Editor
         height="2em"
         defaultLanguage="searchQuery"

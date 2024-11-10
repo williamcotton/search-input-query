@@ -28,6 +28,17 @@
     }
   }
 
+  .error-container {
+    margin-top: 0.7rem;
+    text-align: left;
+    
+    .error-message {
+      color: red;
+      font-size: 0.875rem;
+      margin: 0.2rem 0;
+    }
+  }
+
   .available-fields {
     text-align: left;
     margin-bottom: 1rem;

@@ -79,7 +79,7 @@ describe("Search Query to SQL Converter", () => {
     });
 
     test("handles special date fields", () => {
-      testSqlConversion("date:2024-01-01", "date::date = $1::date", [
+      testSqlConversion("date:2024-01-01", "date = $1", [
         "2024-01-01",
       ]);
     });
@@ -254,12 +254,12 @@ describe("Search Query to SQL Converter", () => {
     });
 
     test("converts date ranges", () => {
-      testSqlConversion("date:>2024-01-01", "date::date > $1::date", [
+      testSqlConversion("date:>2024-01-01", "date > $1", [
         "2024-01-01",
       ]);
       testSqlConversion(
         "date:2024-01-01..2024-12-31",
-        "date::date BETWEEN $1::date AND $2::date",
+        "date BETWEEN $1 AND $2",
         ["2024-01-01", "2024-12-31"]
       );
     });
@@ -277,7 +277,7 @@ describe("Search Query to SQL Converter", () => {
       );
       testSqlConversion(
         "(price:>100 AND amount:<50) OR date:>=2024-01-01",
-        "((price > $1 AND amount < $2) OR date::date >= $3::date)",
+        "((price > $1 AND amount < $2) OR date >= $3)",
         [100, 50, "2024-01-01"]
       );
     });
@@ -293,7 +293,7 @@ describe("Search Query to SQL Converter", () => {
     test("handles multiple date ranges in one query", () => {
       testSqlConversion(
         "date:>=2024-01-01 AND date:<=2024-12-31",
-        "(date::date >= $1::date AND date::date <= $2::date)",
+        "(date >= $1 AND date <= $2)",
         ["2024-01-01", "2024-12-31"]
       );
     });

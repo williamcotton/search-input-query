@@ -275,7 +275,7 @@ const fieldValueToSql = (
   switch (schema?.type) {
     case "date":
       return [
-        `${field}::date = ${paramName}::date`,
+        `${field} = ${paramName}`,
         addValue(newState, cleanedValue),
       ];
     case "number":
@@ -342,16 +342,13 @@ const rangeToSql = (
     }
   }
 
-  const typeCast = isDateField ? "::date" : "";
-  const paramCast = isDateField ? "::date" : "";
-
   if (operator === "BETWEEN" && value2) {
     const [param1, state1] = nextParam(state);
     const [param2, state2] = nextParam(state1);
     let val1 = isDateField ? value : Number(value);
     let val2 = isDateField ? value2 : Number(value2);
     return [
-      `${field}${typeCast} BETWEEN ${param1}${paramCast} AND ${param2}${paramCast}`,
+      `${field} BETWEEN ${param1} AND ${param2}`,
       addValue(addValue(state2, val1), val2),
     ];
   }
@@ -359,7 +356,7 @@ const rangeToSql = (
   const [paramName, newState] = nextParam(state);
   const val = isDateField ? value : Number(value);
   return [
-    `${field}${typeCast} ${operator} ${paramName}${paramCast}`,
+    `${field} ${operator} ${paramName}`,
     addValue(newState, val),
   ];
 };
@@ -387,8 +384,6 @@ const inExpressionToSql = (
 
   const paramNames: string[] = [];
   const schema = state.schemas.get(field.toLowerCase());
-  const typeCast = schema?.type === "date" ? "::date" : "";
-  const paramCast = schema?.type === "date" ? "::date" : "";
 
   for (const value of cleanedValues) {
     const [paramName, newState] = nextParam(currentState);
@@ -400,8 +395,8 @@ const inExpressionToSql = (
   }
 
   return [
-    `${field}${typeCast} IN (${paramNames
-      .map((p) => p + paramCast)
+    `${field} IN (${paramNames
+      .map((p) => p)
       .join(", ")})`,
     currentState,
   ];

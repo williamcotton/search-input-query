@@ -32,41 +32,6 @@ const ESCAPE_CHAR = "\\";
 const escapeRegExp = (str: string): string =>
   str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-const escapeSpecialChars = (value: string): string =>
-  SPECIAL_CHARS.reduce(
-    (escaped, char) =>
-      escaped.replace(new RegExp(escapeRegExp(char), "g"), ESCAPE_CHAR + char),
-    value
-  );
-
-// Helper to escape special characters for ParadeDB query syntax
-const escapeParadeDBChars = (value: string): string => {
-  const specialChars = [
-    "+",
-    "^",
-    "`",
-    ":",
-    "{",
-    "}",
-    '"',
-    "[",
-    "]",
-    "(",
-    ")",
-    "<",
-    ">",
-    "~",
-    "!",
-    "\\",
-    "*",
-  ];
-  return specialChars.reduce(
-    (escaped, char) =>
-      escaped.replace(new RegExp(escapeRegExp(char), "g"), `\\${char}`),
-    value
-  );
-};
-
 const stripQuotes = (value: string): string => {
   if (value.startsWith('"') && value.endsWith('"')) {
     return value.slice(1, -1);
@@ -88,26 +53,6 @@ const cleanQuotedString = (
   cleaned = cleaned.replace(/\\\\/g, "\\");
 
   return cleaned;
-};
-
-const isQuotedString = (value: string): boolean => {
-  return value.startsWith('"') && value.endsWith('"');
-};
-
-const prepareParadeDBString = (
-  value: string,
-  includeWildcard: boolean = false
-): string => {
-  // First clean up the string
-  const cleaned = cleanQuotedString(value);
-
-  // For ParadeDB, we need to:
-  // 1. Escape special characters (except wildcards)
-  // 2. Wrap in quotes
-  // 3. Add wildcard if needed
-  const escaped = escapeParadeDBChars(cleaned);
-  const result = `"${escaped}"`;
-  return includeWildcard ? `${result}*` : result;
 };
 
 // Create a new parameter placeholder and update state
@@ -159,7 +104,6 @@ const searchTermToSql = (
 ): [string, SqlState] => {
   const [paramName, newState] = nextParam(state);
   const hasWildcard = value.endsWith("*");
-  const isQuoted = isQuotedString(value);
   const cleanedValue = cleanQuotedString(value);
   const baseValue = hasWildcard ? cleanedValue.slice(0, -1) : cleanedValue;
 
@@ -361,7 +305,7 @@ export const searchQueryToTsVectorSql = (
 /**
  * Convert a search string directly to SQL
  */
-export const searchStringToTsvectorSql = (
+export const searchStringToTsVectorSql = (
   searchString: string,
   searchableColumns: string[],
   schemas: FieldSchema[] = [],

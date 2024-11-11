@@ -23,20 +23,9 @@ export interface SearchQueryOptions {
   language?: string; // PostgreSQL language configuration for tsvector
 }
 
-// Constants
-const SPECIAL_CHARS = ["%", "_"] as const;
-const ESCAPE_CHAR = "\\";
-
 // Helper Functions
 const escapeRegExp = (str: string): string =>
   str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-const escapeSpecialChars = (value: string): string =>
-  SPECIAL_CHARS.reduce(
-    (escaped, char) =>
-      escaped.replace(new RegExp(escapeRegExp(char), "g"), ESCAPE_CHAR + char),
-    value
-  );
 
 // Helper to escape special characters for ParadeDB query syntax
 const escapeParadeDBChars = (value: string): string => {
@@ -87,10 +76,6 @@ const cleanQuotedString = (
   cleaned = cleaned.replace(/\\\\/g, "\\");
 
   return cleaned;
-};
-
-const isQuotedString = (value: string): boolean => {
-  return value.startsWith('"') && value.endsWith('"');
 };
 
 const prepareParadeDBString = (
@@ -159,7 +144,6 @@ const searchTermToSql = (
 ): [string, SqlState] => {
   const [paramName, newState] = nextParam(state);
   const hasWildcard = value.endsWith("*");
-  const isQuoted = isQuotedString(value);
   const cleanedValue = cleanQuotedString(value);
   const baseValue = hasWildcard ? cleanedValue.slice(0, -1) : cleanedValue;
 
@@ -347,7 +331,7 @@ export const searchQueryToParadeDbSql = (
 /**
  * Convert a search string directly to SQL
  */
-export const searchStringToParadedbSql = (
+export const searchStringToParadeDBSql = (
   searchString: string,
   searchableColumns: string[],
   schemas: FieldSchema[] = [],

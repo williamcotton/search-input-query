@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
 import Editor, { OnMount } from "@monaco-editor/react";
-import type { editor, languages, KeyCode, Range } from "monaco-editor";
+import { editor, languages, KeyCode, Range } from "monaco-editor";
 import {
   FieldSchema,
   Expression,
@@ -10,6 +10,7 @@ import {
 import type { ValidationError } from "../../search-input-query-parser/src/validator";
 import { createCompletionItemProvider } from "./create-completion-item-provider";
 import { registerSearchQueryLanguage } from "./search-syntax";
+import { PlaceholderContentWidget } from "./PlaceholderContentWidget";
 
 interface SearchInputQueryProps {
   schemas: FieldSchema[];
@@ -18,6 +19,7 @@ interface SearchInputQueryProps {
     parsedResult: string;
     errors: ValidationError[];
   }) => void;
+  placeholder?: string;
 }
 
 export interface Monaco {
@@ -30,22 +32,21 @@ export interface Monaco {
 export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
   schemas,
   onSearchResult,
+  placeholder,
 }) => {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
+  const placeholderRef = useRef<PlaceholderContentWidget | null>(null);
   const [decorations, setDecorations] =
     useState<editor.IEditorDecorationsCollection | null>(null);
-  const [currentValue, setCurrentValue] = useState<string>("");
 
   const clearAllErrorDecorations = () => {
     const editor = editorRef.current;
     if (!editor) return;
 
-    // Get the model
     const model = editor.getModel();
     if (!model) return;
 
-    // Find all instances of search-input-error and remove them
     const oldDecorations = model
       .getAllDecorations()
       .filter((d) => d.options.inlineClassName === "search-input-error")
@@ -55,7 +56,6 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
       model.deltaDecorations(oldDecorations, []);
     }
 
-    // Also clear our stored decorations collection
     if (decorations) {
       decorations.clear();
       setDecorations(null);
@@ -66,15 +66,15 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
     editorRef.current = editor;
     monacoRef.current = monaco;
 
-    monaco.editor.addKeybindingRule({
-      keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF,
-      command: null,
-    });
+    // Initialize placeholder
+    placeholderRef.current = new PlaceholderContentWidget(
+      placeholder || '',
+      editor
+    );
 
-    // Register our custom language
+    // Register custom language
     registerSearchQueryLanguage(monaco);
 
-    // Configure auto-closing and surrounding behavior for searchQuery language
     monaco.languages.setLanguageConfiguration("searchQuery", {
       autoClosingPairs: [
         { open: "(", close: ")" },
@@ -87,7 +87,6 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
       brackets: [["(", ")"]],
     });
 
-    // Register the completion provider for our custom language
     monaco.languages.registerCompletionItemProvider(
       "searchQuery",
       createCompletionItemProvider(monaco, schemas)
@@ -134,8 +133,6 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
   };
 
   const handleSearch = (value: string) => {
-    setCurrentValue(value.replace(/[\n\r]/g, ''))
-
     clearAllErrorDecorations();
 
     if (!value.trim()) {
@@ -208,7 +205,6 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
   return (
     <div className="search-wrapper">
       <Editor
-        value={currentValue}
         height="2em"
         defaultLanguage="searchQuery"
         defaultValue=""
@@ -233,7 +229,6 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
           overviewRulerBorder: false,
           renderLineHighlight: "none",
           theme: "searchQueryTheme",
-          // Auto-closing configuration
           autoClosingBrackets: "always",
           autoClosingQuotes: "always",
           autoClosingOvertype: "always",

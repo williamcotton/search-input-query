@@ -240,7 +240,11 @@ const SearchComponent = () => {
         ))}
       </div>
 
-      <SearchInputQuery schemas={schemas} onSearchResult={handleSearchResult} />
+      <SearchInputQuery
+        schemas={schemas}
+        onSearchResult={handleSearchResult}
+        placeholder={`Try "category:boots AND price:>100" or "winter shoes"...`}
+      />
 
       {errors.length > 0 && (
         <div className="error-container">

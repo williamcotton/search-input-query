@@ -254,7 +254,7 @@ const SearchComponent = () => {
       <SearchInputQuery
         schemas={schemas}
         onSearchResult={handleSearchResult}
-        placeholder={`Try "category:boots AND price:>100" or "winter shoes"...`}
+        // placeholder={`Try "category:boots AND price:>100" or "winter shoes"...`}
         editorTheme={editorTheme}
       />
 

@@ -10,7 +10,7 @@ import {
 import type { ValidationError } from "search-input-query-parser/validator";
 import { createCompletionItemProvider } from "./create-completion-item-provider";
 import { registerSearchQueryLanguage } from "./search-syntax";
-import { PlaceholderContentWidget } from "./PlaceholderContentWidget";
+// import { PlaceholderContentWidget } from "./PlaceholderContentWidget";
 
 interface SearchInputQueryProps {
   schemas: FieldSchema[];
@@ -19,7 +19,7 @@ interface SearchInputQueryProps {
     parsedResult: string;
     errors: ValidationError[];
   }) => void;
-  placeholder?: string;
+  // placeholder?: string;
   editorTheme: editor.IStandaloneThemeData;
 }
 
@@ -35,12 +35,12 @@ export interface Monaco {
 export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
   schemas,
   onSearchResult,
-  placeholder,
+  // placeholder,
   editorTheme,
 }) => {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
-  const placeholderRef = useRef<PlaceholderContentWidget | null>(null);
+  // const placeholderRef = useRef<PlaceholderContentWidget | null>(null);
   const [decorations, setDecorations] =
     useState<editor.IEditorDecorationsCollection | null>(null);
 
@@ -70,11 +70,11 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
     editorRef.current = editor;
     monacoRef.current = monaco;
 
-    // Initialize placeholder
-    placeholderRef.current = new PlaceholderContentWidget(
-      placeholder || '',
-      editor
-    );
+    // TODO: fix issues with cursor placement when using placeholder
+    // placeholderRef.current = new PlaceholderContentWidget(
+    //   placeholder || '',
+    //   editor
+    // );
 
     // Register custom language
     registerSearchQueryLanguage(monaco, editorTheme);

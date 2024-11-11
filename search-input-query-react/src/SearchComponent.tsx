@@ -11,6 +11,7 @@ import {
 import type { ValidationError } from "../../search-input-query-parser/src/validator";
 import { ExpressionDescription } from "./ExpressionDescription";
 import { SearchInputQuery, EditorTheme } from "./SearchInputQuery";
+import SearchTypeSelector from "./SearchTypeSelector";
 import { type Product, searchProducts } from "./db-service";
 
 const schemas: FieldSchema[] = [
@@ -62,29 +63,6 @@ const editorTheme: EditorTheme = {
 
 const allowedFields = schemas.map((schema) => schema.name);
 const searchableColumns = ["title", "description"];
-
-const searchTypes: Array<{
-  value: SearchType;
-  label: string;
-  description: string;
-}> = [
-  {
-    value: "ilike",
-    label: "ILIKE",
-    description:
-      "Case-insensitive pattern matching using case insensitive LIKE",
-  },
-  {
-    value: "tsvector",
-    label: "Full Text Search",
-    description: "PostgreSQL native full text search using tsvector/tsquery",
-  },
-  {
-    value: "paradedb",
-    label: "ParadeDB",
-    description: "Full text search using ParadeDB's @@@ operator",
-  },
-];
 
 const SearchComponent = () => {
   const [expression, setExpression] = useState<Expression | null>(null);
@@ -205,46 +183,27 @@ const SearchComponent = () => {
 
           {showSql && sqlQuery && (
             <>
-              <div className="search-type-selector">
-                <h3>Search Type:</h3>
-                <div className="radio-group">
-                  {searchTypes.map((type) => (
-                    <label key={type.value} className="radio-label">
-                      <input
-                        type="radio"
-                        name="searchType"
-                        value={type.value}
-                        checked={sqlSearchType === type.value}
-                        onChange={(e) => {
-                          const newSearchType = e.target.value as SearchType;
-                          setSqlSearchType(newSearchType);
-                          if (expression) {
-                            const parseResult: SearchQuery = {
-                              type: "SEARCH_QUERY",
-                              expression,
-                            };
-                            const sql = searchQueryToSql(
-                              parseResult,
-                              searchableColumns,
-                              schemas,
-                              {
-                                searchType: newSearchType,
-                              }
-                            );
-                            setSqlQuery(sql);
-                          }
-                        }}
-                      />
-                      <div>
-                        <strong>{type.label}</strong>
-                        <p className="search-type-description">
-                          {type.description}
-                        </p>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
+              <SearchTypeSelector
+                searchType={sqlSearchType}
+                onSearchTypeChange={(newType) => {
+                  setSqlSearchType(newType);
+                  if (expression) {
+                    const parseResult: SearchQuery = {
+                      type: "SEARCH_QUERY",
+                      expression,
+                    };
+                    const sql = searchQueryToSql(
+                      parseResult,
+                      searchableColumns,
+                      schemas,
+                      {
+                        searchType: newType,
+                      }
+                    );
+                    setSqlQuery(sql);
+                  }
+                }}
+              />
 
               <div className="sql-query">
                 <h3>SQL WHERE Clause:</h3>

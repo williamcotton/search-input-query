@@ -1,5 +1,7 @@
 import { describe, expect, test } from "@jest/globals";
-import { searchQueryToSql, searchStringToSql } from "./search-query-to-sql";
+import { searchQueryToIlikeSql, searchStringToIlikeSql } from "./search-query-to-ilike-sql";
+import { searchQueryToTsVectorSql } from "./search-query-to-tsvector-sql";
+import { searchQueryToParadeDbSql } from "./search-query-to-paradedb-sql";
 import { parseSearchInputQuery } from "./parser";
 import type { SearchQuery, FieldSchema } from "./parser";
 
@@ -19,14 +21,14 @@ describe("Search Query to SQL Converter", () => {
     { name: "user_id", type: "number" },
   ];
 
-  const testSqlConversion = (
+  const testIlikeConversion = (
     query: string,
     expectedSql: string,
     expectedValues: any[]
   ) => {
     const parsedQuery = parseSearchInputQuery(query, schemas);
     expect(parsedQuery.type).toBe("SEARCH_QUERY");
-    const result = searchQueryToSql(
+    const result = searchQueryToIlikeSql(
       parsedQuery as SearchQuery,
       searchableColumns,
       schemas
@@ -37,7 +39,7 @@ describe("Search Query to SQL Converter", () => {
 
   describe("Basic Term Conversion", () => {
     test("converts single search term", () => {
-      testSqlConversion(
+      testIlikeConversion(
         "boots",
         "(lower(title) LIKE lower($1) OR lower(description) LIKE lower($1) OR lower(content) LIKE lower($1))",
         ["%boots%"]
@@ -45,7 +47,7 @@ describe("Search Query to SQL Converter", () => {
     });
 
     test("converts quoted search term", () => {
-      testSqlConversion(
+      testIlikeConversion(
         '"red shoes"',
         "(lower(title) LIKE lower($1) OR lower(description) LIKE lower($1) OR lower(content) LIKE lower($1))",
         ["%red shoes%"]
@@ -53,13 +55,13 @@ describe("Search Query to SQL Converter", () => {
     });
 
     test("escapes special characters in search terms", () => {
-      // testSqlConversion(
+      // testIlikeConversion(
       //   "100%",
       //   "(lower(title) LIKE lower($1) OR lower(description) LIKE lower($1) OR lower(content) LIKE lower($1))",
       //   ["%100\\%%"]
       // );
 
-      testSqlConversion(
+      testIlikeConversion(
         "under_score",
         "(lower(title) LIKE lower($1) OR lower(description) LIKE lower($1) OR lower(content) LIKE lower($1))",
         ["%under\\_score%"]
@@ -69,27 +71,27 @@ describe("Search Query to SQL Converter", () => {
 
   describe("Field Value Conversion", () => {
     test("converts simple field:value pairs", () => {
-      // testSqlConversion("color:red", "lower(color) LIKE lower($1)", ["%red%"]);
+      // testIlikeConversion("color:red", "lower(color) LIKE lower($1)", ["%red%"]);
     });
 
     test("converts field values with spaces", () => {
-      testSqlConversion('status:"in progress"', "lower(status) LIKE lower($1)", [
+      testIlikeConversion('status:"in progress"', "lower(status) LIKE lower($1)", [
         "%in progress%",
       ]);
     });
 
     test("handles special date fields", () => {
-      testSqlConversion("date:2024-01-01", "date = $1", [
+      testIlikeConversion("date:2024-01-01", "date = $1", [
         "2024-01-01",
       ]);
     });
 
     test("handles ID fields", () => {
-      testSqlConversion("user_id:123", "user_id = $1", [123]);
+      testIlikeConversion("user_id:123", "user_id = $1", [123]);
     });
 
     test("escapes special characters in field values", () => {
-      testSqlConversion("category:100%", "lower(category) LIKE lower($1)", [
+      testIlikeConversion("category:100%", "lower(category) LIKE lower($1)", [
         "%100\\%%",
       ]);
     });
@@ -97,7 +99,7 @@ describe("Search Query to SQL Converter", () => {
 
   describe("Logical Operators", () => {
     test("converts AND expressions", () => {
-      testSqlConversion(
+      testIlikeConversion(
         "comfortable AND leather",
         "((lower(title) LIKE lower($1) OR lower(description) LIKE lower($1) OR lower(content) LIKE lower($1)) AND (lower(title) LIKE lower($2) OR lower(description) LIKE lower($2) OR lower(content) LIKE lower($2)))",
         ["%comfortable%", "%leather%"]
@@ -105,7 +107,7 @@ describe("Search Query to SQL Converter", () => {
     });
 
     test("converts OR expressions", () => {
-      testSqlConversion(
+      testIlikeConversion(
         "leather OR suede",
         "((lower(title) LIKE lower($1) OR lower(description) LIKE lower($1) OR lower(content) LIKE lower($1)) OR (lower(title) LIKE lower($2) OR lower(description) LIKE lower($2) OR lower(content) LIKE lower($2)))",
         ["%leather%", "%suede%"]
@@ -113,7 +115,7 @@ describe("Search Query to SQL Converter", () => {
     });
 
     test("converts mixed operators", () => {
-      testSqlConversion(
+      testIlikeConversion(
         "comfortable AND (leather OR suede)",
         "((lower(title) LIKE lower($1) OR lower(description) LIKE lower($1) OR lower(content) LIKE lower($1)) AND ((lower(title) LIKE lower($2) OR lower(description) LIKE lower($2) OR lower(content) LIKE lower($2)) OR (lower(title) LIKE lower($3) OR lower(description) LIKE lower($3) OR lower(content) LIKE lower($3))))",
         ["%comfortable%", "%leather%", "%suede%"]
@@ -123,7 +125,7 @@ describe("Search Query to SQL Converter", () => {
 
   describe("NOT SQL Conversion", () => {
     test("converts simple NOT expressions", () => {
-      testSqlConversion(
+      testIlikeConversion(
         "NOT test",
         "NOT (lower(title) LIKE lower($1) OR lower(description) LIKE lower($1) OR lower(content) LIKE lower($1))",
         ["%test%"]
@@ -131,19 +133,19 @@ describe("Search Query to SQL Converter", () => {
     });
 
     test("converts NOT with field:value", () => {
-      testSqlConversion("NOT status:active", "NOT lower(status) LIKE lower($1)", [
+      testIlikeConversion("NOT status:active", "NOT lower(status) LIKE lower($1)", [
         "%active%",
       ]);
     });
 
     test("converts complex NOT expressions", () => {
-      testSqlConversion(
+      testIlikeConversion(
         "boots AND NOT leather",
         "((lower(title) LIKE lower($1) OR lower(description) LIKE lower($1) OR lower(content) LIKE lower($1)) AND NOT (lower(title) LIKE lower($2) OR lower(description) LIKE lower($2) OR lower(content) LIKE lower($2)))",
         ["%boots%", "%leather%"]
       );
 
-      testSqlConversion(
+      testIlikeConversion(
         "NOT (color:red OR color:blue)",
         "NOT (lower(color) LIKE lower($1) OR lower(color) LIKE lower($2))",
         ["%red%", "%blue%"]
@@ -153,7 +155,7 @@ describe("Search Query to SQL Converter", () => {
 
   describe("Complex Queries", () => {
     test("converts complex field and term combinations", () => {
-      testSqlConversion(
+      testIlikeConversion(
         'category:"winter boots" AND (color:black OR color:brown)',
         "(lower(category) LIKE lower($1) AND (lower(color) LIKE lower($2) OR lower(color) LIKE lower($3)))",
         ["%winter boots%", "%black%", "%brown%"]
@@ -161,7 +163,7 @@ describe("Search Query to SQL Converter", () => {
     });
 
     test("converts nested expressions with multiple operators", () => {
-      testSqlConversion(
+      testIlikeConversion(
         '(color:red OR color:blue) AND category:"winter boots" AND available:true',
         "(((lower(color) LIKE lower($1) OR lower(color) LIKE lower($2)) AND lower(category) LIKE lower($3)) AND lower(available) LIKE lower($4))",
         ["%red%", "%blue%", "%winter boots%", "%true%"]
@@ -169,7 +171,7 @@ describe("Search Query to SQL Converter", () => {
     });
 
     test("handles mixed fields and search terms", () => {
-      testSqlConversion(
+      testIlikeConversion(
         'boots AND color:black AND "winter gear"',
         "(((lower(title) LIKE lower($1) OR lower(description) LIKE lower($1) OR lower(content) LIKE lower($1)) AND lower(color) LIKE lower($2)) AND (lower(title) LIKE lower($3) OR lower(description) LIKE lower($3) OR lower(content) LIKE lower($3)))",
         ["%boots%", "%black%", "%winter gear%"]
@@ -179,7 +181,7 @@ describe("Search Query to SQL Converter", () => {
 
   describe("Edge Cases", () => {
     test("handles empty query", () => {
-      const result = searchQueryToSql(
+      const result = searchQueryToIlikeSql(
         { type: "SEARCH_QUERY", expression: null },
         searchableColumns
       );
@@ -189,23 +191,23 @@ describe("Search Query to SQL Converter", () => {
 
     test("throws error for invalid query syntax", () => {
       expect(() =>
-        searchStringToSql("AND", searchableColumns, schemas)
+        searchStringToIlikeSql("AND", searchableColumns, schemas)
       ).toThrow("Parse error");
       expect(() =>
-        searchStringToSql("field:", searchableColumns, schemas)
+        searchStringToIlikeSql("field:", searchableColumns, schemas)
       ).toThrow("Parse error");
     });
 
     test("throws error for invalid fields", () => {
       expect(() =>
-        searchStringToSql("invalid_field:value", searchableColumns, schemas)
+        searchStringToIlikeSql("invalid_field:value", searchableColumns, schemas)
       ).toThrow('Parse error: Invalid field: "invalid_field"');
     });
   });
 
   describe("Parameter Counting", () => {
     test("maintains correct parameter count in complex queries", () => {
-      testSqlConversion(
+      testIlikeConversion(
         'term1 AND field1:value1 OR (term2 AND field2:"value 2")',
         "(((lower(title) LIKE lower($1) OR lower(description) LIKE lower($1) OR lower(content) LIKE lower($1)) AND lower(field1) LIKE lower($2)) OR ((lower(title) LIKE lower($3) OR lower(description) LIKE lower($3) OR lower(content) LIKE lower($3)) AND lower(field2) LIKE lower($4)))",
         ["%term1%", "%value1%", "%term2%", "%value 2%"]
@@ -215,7 +217,7 @@ describe("Search Query to SQL Converter", () => {
 
   describe("Special Character Handling", () => {
     test("escapes SQL wildcards", () => {
-      testSqlConversion(
+      testIlikeConversion(
         "prefix% AND suffix_",
         "((lower(title) LIKE lower($1) OR lower(description) LIKE lower($1) OR lower(content) LIKE lower($1)) AND (lower(title) LIKE lower($2) OR lower(description) LIKE lower($2) OR lower(content) LIKE lower($2)))",
         ["%prefix\\%%", "%suffix\\_%"]
@@ -223,7 +225,7 @@ describe("Search Query to SQL Converter", () => {
     });
 
     test("handles quoted strings with escaped characters", () => {
-      testSqlConversion(
+      testIlikeConversion(
         '"value\\"with\\"quotes"',
         "(lower(title) LIKE lower($1) OR lower(description) LIKE lower($1) OR lower(content) LIKE lower($1))",
         ['%value"with"quotes%']
@@ -233,15 +235,15 @@ describe("Search Query to SQL Converter", () => {
 
   describe("Range Query Conversion", () => {
     test("converts comparison operators for numbers", () => {
-      testSqlConversion("price:>100", "price > $1", [100]);
-      testSqlConversion("price:>=100", "price >= $1", [100]);
-      testSqlConversion("price:<50", "price < $1", [50]);
-      testSqlConversion("price:<=50", "price <= $1", [50]);
+      testIlikeConversion("price:>100", "price > $1", [100]);
+      testIlikeConversion("price:>=100", "price >= $1", [100]);
+      testIlikeConversion("price:<50", "price < $1", [50]);
+      testIlikeConversion("price:<=50", "price <= $1", [50]);
     });
 
     test("converts between ranges for numbers", () => {
-      testSqlConversion("price:10..20", "price BETWEEN $1 AND $2", [10, 20]);
-      testSqlConversion(
+      testIlikeConversion("price:10..20", "price BETWEEN $1 AND $2", [10, 20]);
+      testIlikeConversion(
         "amount:50.99..100.50",
         "amount BETWEEN $1 AND $2",
         [50.99, 100.5]
@@ -249,15 +251,15 @@ describe("Search Query to SQL Converter", () => {
     });
 
     test("converts open-ended ranges for numbers", () => {
-      testSqlConversion("price:10..", "price >= $1", [10]);
-      testSqlConversion("price:..20", "price <= $1", [20]);
+      testIlikeConversion("price:10..", "price >= $1", [10]);
+      testIlikeConversion("price:..20", "price <= $1", [20]);
     });
 
     test("converts date ranges", () => {
-      testSqlConversion("date:>2024-01-01", "date > $1", [
+      testIlikeConversion("date:>2024-01-01", "date > $1", [
         "2024-01-01",
       ]);
-      testSqlConversion(
+      testIlikeConversion(
         "date:2024-01-01..2024-12-31",
         "date BETWEEN $1 AND $2",
         ["2024-01-01", "2024-12-31"]
@@ -265,17 +267,17 @@ describe("Search Query to SQL Converter", () => {
     });
 
     test("converts complex expressions with ranges", () => {
-      testSqlConversion(
+      testIlikeConversion(
         "price:>100 AND amount:<50",
         "(price > $1 AND amount < $2)",
         [100, 50]
       );
-      testSqlConversion(
+      testIlikeConversion(
         "price:10..20 OR amount:>=100",
         "(price BETWEEN $1 AND $2 OR amount >= $3)",
         [10, 20, 100]
       );
-      testSqlConversion(
+      testIlikeConversion(
         "(price:>100 AND amount:<50) OR date:>=2024-01-01",
         "((price > $1 AND amount < $2) OR date >= $3)",
         [100, 50, "2024-01-01"]
@@ -283,7 +285,7 @@ describe("Search Query to SQL Converter", () => {
     });
 
     test("mixes ranges with regular field searches", () => {
-      testSqlConversion(
+      testIlikeConversion(
         'title:"winter boots" AND price:10..20',
         "(lower(title) LIKE lower($1) AND price BETWEEN $2 AND $3)",
         ["%winter boots%", 10, 20]
@@ -291,7 +293,7 @@ describe("Search Query to SQL Converter", () => {
     });
 
     test("handles multiple date ranges in one query", () => {
-      testSqlConversion(
+      testIlikeConversion(
         "date:>=2024-01-01 AND date:<=2024-12-31",
         "(date >= $1 AND date <= $2)",
         ["2024-01-01", "2024-12-31"]
@@ -299,7 +301,7 @@ describe("Search Query to SQL Converter", () => {
     });
 
     test("handles decimal numbers in ranges", () => {
-      testSqlConversion(
+      testIlikeConversion(
         "price:10.5..20.99",
         "price BETWEEN $1 AND $2",
         [10.5, 20.99]
@@ -307,16 +309,16 @@ describe("Search Query to SQL Converter", () => {
     });
 
     test("preserves numeric precision", () => {
-      testSqlConversion("price:>=99.99", "price >= $1", [99.99]);
+      testIlikeConversion("price:>=99.99", "price >= $1", [99.99]);
     });
 
     test("handles negative numbers in ranges", () => {
-      testSqlConversion(
+      testIlikeConversion(
         "amount:-10..10",
         "amount BETWEEN $1 AND $2",
         [-10, 10]
       );
-      testSqlConversion("amount:<-10", "amount < $1", [-10]);
+      testIlikeConversion("amount:<-10", "amount < $1", [-10]);
     });
   });
 
@@ -328,12 +330,11 @@ describe("Search Query to SQL Converter", () => {
     ) => {
       const parsedQuery = parseSearchInputQuery(query, schemas);
       expect(parsedQuery.type).toBe("SEARCH_QUERY");
-      const result = searchQueryToSql(
+      const result = searchQueryToTsVectorSql(
         parsedQuery as SearchQuery,
         searchableColumns,
         schemas,
         {
-          searchType: "tsvector",
           language: "english",
         }
       );
@@ -382,13 +383,10 @@ describe("Search Query to SQL Converter", () => {
     ) => {
       const parsedQuery = parseSearchInputQuery(query, schemas);
       expect(parsedQuery.type).toBe("SEARCH_QUERY");
-      const result = searchQueryToSql(
+      const result = searchQueryToParadeDbSql(
         parsedQuery as SearchQuery,
         searchableColumns,
-        schemas,
-        {
-          searchType: "paradedb",
-        }
+        schemas
       );
       expect(result.text).toBe(expectedSql);
       expect(result.values).toEqual(expectedValues);

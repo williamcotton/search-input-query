@@ -8,7 +8,10 @@ import {
   searchQueryToSql,
   SearchType,
 } from "search-input-query-parser/search-query-to-sql";
-import type { ValidationError } from "search-input-query-parser/validator";
+import { searchQueryToIlikeSql } from "../../search-input-query-parser/src/search-query-to-ilike-sql";
+import { searchQueryToParadeDbSql } from "../../search-input-query-parser/src/search-query-to-paradedb-sql";
+import { searchQueryToTsVectorSql } from "../../search-input-query-parser/src/search-query-to-tsvector-sql";
+import type { ValidationError } from "../../search-input-query-parser/src/validator";
 import { ExpressionDescription } from "./ExpressionDescription";
 import { SearchInputQuery, EditorTheme } from "./SearchInputQuery";
 import SearchTypeSelector from "./SearchTypeSelector";
@@ -95,9 +98,20 @@ const SearchComponent = () => {
           expression: result.expression,
         };
 
-        const sql = searchQueryToSql(parseResult, searchableColumns, schemas, {
-          searchType: sqlSearchType,
-        });
+        let sql;
+        switch (sqlSearchType) {
+          case "ilike":
+            sql = searchQueryToIlikeSql(parseResult, searchableColumns, schemas);
+            break;
+          case "tsvector":
+            sql = searchQueryToTsVectorSql(parseResult,searchableColumns,schemas);
+            break;
+          case "paradedb":
+            sql = searchQueryToParadeDbSql(parseResult,searchableColumns,schemas);
+            break;
+          default:
+            throw new Error(`Unknown search type: ${sqlSearchType}`);
+        }
 
         setSqlQuery(sql);
 

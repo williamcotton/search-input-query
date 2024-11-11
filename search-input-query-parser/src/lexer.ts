@@ -71,18 +71,6 @@ const readUntil = (
   return result;
 };
 
-const skipWhile = (
-  input: string,
-  start: number,
-  predicate: (char: string) => boolean
-): number => {
-  let pos = start;
-  while (pos < input.length && predicate(input[pos])) {
-    pos++;
-  }
-  return pos;
-};
-
 const tokenizeQuotedString = (
   input: string,
   position: number

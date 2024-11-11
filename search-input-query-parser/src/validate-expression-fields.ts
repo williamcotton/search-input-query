@@ -65,36 +65,6 @@ const validateNumericComparison = (
   return validateNumber(value, valuePosition, errors);
 };
 
-const validateInExpression = (
-  values: string[],
-  schema: FieldSchema | undefined,
-  position: number,
-  errors: ValidationError[]
-): void => {
-  if (schema?.type === "date") {
-    for (const value of values) {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-        errors.push({
-          message: "Invalid date format in IN expression",
-          position,
-          length: value.length,
-        });
-      }
-    }
-  } else if (schema?.type === "number") {
-    for (const value of values) {
-      if (isNaN(Number(value))) {
-        errors.push({
-          message: "Invalid numeric value in IN expression",
-          position,
-          length: value.length,
-        });
-      }
-    }
-  }
-};
-
-
 // Field validation helpers
 const validateFieldValue = (
   expr: FirstPassExpression,

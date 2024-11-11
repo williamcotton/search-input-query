@@ -20,7 +20,10 @@ interface SearchInputQueryProps {
     errors: ValidationError[];
   }) => void;
   placeholder?: string;
+  editorTheme: editor.IStandaloneThemeData;
 }
+
+export type EditorTheme = editor.IStandaloneThemeData;
 
 export interface Monaco {
   editor: typeof editor;
@@ -33,6 +36,7 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
   schemas,
   onSearchResult,
   placeholder,
+  editorTheme,
 }) => {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
@@ -73,7 +77,7 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
     );
 
     // Register custom language
-    registerSearchQueryLanguage(monaco);
+    registerSearchQueryLanguage(monaco, editorTheme);
 
     monaco.languages.setLanguageConfiguration("searchQuery", {
       autoClosingPairs: [

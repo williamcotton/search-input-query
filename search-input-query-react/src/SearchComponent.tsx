@@ -10,7 +10,7 @@ import {
 } from "../../search-input-query-parser/src/search-query-to-sql";
 import type { ValidationError } from "../../search-input-query-parser/src/validator";
 import { ExpressionDescription } from "./ExpressionDescription";
-import { SearchInputQuery } from "./SearchInputQuery";
+import { SearchInputQuery, EditorTheme } from "./SearchInputQuery";
 import { type Product, searchProducts } from "./db-service";
 
 const schemas: FieldSchema[] = [
@@ -21,6 +21,44 @@ const schemas: FieldSchema[] = [
   { name: "price", type: "number" },
   { name: "date", type: "date" },
 ];
+
+const editorTheme: EditorTheme = {
+  base: "vs",
+  inherit: true,
+  rules: [
+    { token: "keyword", foreground: "#794938", fontStyle: "bold" },
+    { token: "field", foreground: "#234A97", fontStyle: "bold" },
+    { token: "value", foreground: "#0B6125" },
+    { token: "operator", foreground: "#811F24" },
+    { token: "string", foreground: "#0B6125" },
+    {
+      token: "string.invalid",
+      foreground: "#B52A1D",
+      fontStyle: "bold italic underline",
+    },
+    {
+      token: "string.escape",
+      foreground: "#CF5628",
+      fontStyle: "bold",
+    },
+    { token: "string.quote", foreground: "#0B6125" },
+    { token: "number", foreground: "#A71D5D" },
+    { token: "date", foreground: "#A71D5D" },
+    { token: "identifier", foreground: "#080808" },
+    { token: "@brackets", foreground: "#794938" },
+    { token: "delimiter", foreground: "#811F24" },
+    { token: "text", foreground: "#080808" },
+  ],
+  colors: {
+    "editor.foreground": "#24292F",
+    "editor.background": "#FFFFFF",
+    "editorCursor.foreground": "#24292F",
+    "editor.lineHighlightBackground": "#FFFFFF",
+    "editorLineNumber.foreground": "#57606A",
+    "editor.selectionBackground": "#275FFF4D",
+    "editor.inactiveSelectionBackground": "#0550AE15",
+  },
+};
 
 const allowedFields = schemas.map((schema) => schema.name);
 const searchableColumns = ["title", "description"];
@@ -244,6 +282,7 @@ const SearchComponent = () => {
         schemas={schemas}
         onSearchResult={handleSearchResult}
         placeholder={`Try "category:boots AND price:>100" or "winter shoes"...`}
+        editorTheme={editorTheme}
       />
 
       {errors.length > 0 && (

@@ -3,12 +3,12 @@ import {
   FieldSchema,
   Expression,
   SearchQuery,
-} from "../../search-input-query-parser/src/parser";
+} from "search-input-query-parser";
 import {
   searchQueryToSql,
   SearchType,
-} from "../../search-input-query-parser/src/search-query-to-sql";
-import type { ValidationError } from "../../search-input-query-parser/src/validator";
+} from "search-input-query-parser/search-query-to-sql";
+import type { ValidationError } from "search-input-query-parser/validator";
 import { ExpressionDescription } from "./ExpressionDescription";
 import { SearchInputQuery, EditorTheme } from "./SearchInputQuery";
 import SearchTypeSelector from "./SearchTypeSelector";

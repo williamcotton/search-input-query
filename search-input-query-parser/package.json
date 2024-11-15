@@ -1,12 +1,48 @@
 {
   "name": "search-input-query-parser",
-  "version": "0.1.0",
-  "main": "src/parser.js",
+  "version": "0.1.1",
+  "description": "A parser for advanced search query syntax with field:value support",
+  "keywords": [
+    "search",
+    "parser",
+    "query",
+    "typescript"
+  ],
+  "author": "William Cotton",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/williamcotton/search-input-query"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/types/parser.d.ts",
+      "import": "./dist/esm/parser.js",
+      "require": "./dist/cjs/parser.js"
+    },
+    "./validator": {
+      "types": "./dist/types/validator.d.ts",
+      "import": "./dist/esm/validator.js",
+      "require": "./dist/cjs/validator.js"
+    },
+    "./search-query-to-sql": {
+      "types": "./dist/types/search-query-to-sql.d.ts",
+      "import": "./dist/esm/search-query-to-sql.js",
+      "require": "./dist/cjs/search-query-to-sql.js"
+    }
+  },
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",
-    "build": "tsc",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "build": "npm run build:esm && npm run build:cjs && npm run build:types",
+    "build:esm": "tsc -p tsconfig.esm.json",
+    "build:cjs": "tsc -p tsconfig.cjs.json",
+    "build:types": "tsc -p tsconfig.types.json",
+    "prepublishOnly": "npm run build"
   },
   "jest": {
     "preset": "ts-jest",
@@ -15,9 +51,7 @@
       "**/*.test.ts"
     ]
   },
-  "author": "",
   "license": "ISC",
-  "description": "",
   "devDependencies": {
     "@types/jest": "^29.5.14",
     "@types/node": "^20.11.0",

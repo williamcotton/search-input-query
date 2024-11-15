@@ -1,7 +1,7 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "module": "CommonJS",
-    "outDir": "./dist/cjs"
+    "emitDeclarationOnly": true,
+    "outDir": "dist/types"
   }
 }

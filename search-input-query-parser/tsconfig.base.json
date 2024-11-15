@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2018",
+    "lib": ["es2018"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "types": ["jest", "node"]
+  },
+  "include": [
+    "./src/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "jest.config.ts"
+  ]
+}

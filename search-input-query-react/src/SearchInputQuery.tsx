@@ -6,8 +6,8 @@ import {
   Expression,
   parseSearchInputQuery,
   stringify,
-} from "../../search-input-query-parser/src/parser";
-import type { ValidationError } from "../../search-input-query-parser/src/validator";
+} from "search-input-query-parser";
+import type { ValidationError } from "search-input-query-parser/validator";
 import { createCompletionItemProvider } from "./create-completion-item-provider";
 import { registerSearchQueryLanguage } from "./search-syntax";
 import { PlaceholderContentWidget } from "./PlaceholderContentWidget";

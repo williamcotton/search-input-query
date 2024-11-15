@@ -6,6 +6,16 @@ import {
   WildcardPattern,
 } from "./parser";
 
+export {
+  searchStringToIlikeSql,
+  searchQueryToIlikeSql,
+} from "./search-query-to-ilike-sql";
+export { searchQueryToTsVectorSql, searchStringToTsVectorSql } from "./search-query-to-tsvector-sql";
+export {
+  searchQueryToParadeDbSql,
+  searchStringToParadeDbSql,
+} from "./search-query-to-paradedb-sql";
+
 export interface SqlQueryResult {
   text: string;
   values: any[];

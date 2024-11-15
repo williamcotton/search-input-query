@@ -331,7 +331,7 @@ export const searchQueryToParadeDbSql = (
 /**
  * Convert a search string directly to SQL
  */
-export const searchStringToParadeDBSql = (
+export const searchStringToParadeDbSql = (
   searchString: string,
   searchableColumns: string[],
   schemas: FieldSchema[] = [],

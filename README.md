@@ -1,10 +1,10 @@
 # Search Input Query
 
-A DSL reminiscent of other fulltext search query languages.
+A DSL reminiscent of other fulltext string-based query languages such as [Elasticsearch](https://www.elastic.co/guide/en/elasticsearch/reference/8.15/query-dsl-query-string-query.html) and [Tantivy](https://docs.rs/tantivy/latest/tantivy/query/struct.QueryParser.html)
 
 Features a multi-pass recursive descent parser with support for multiple errors and type checking.
 
-Converts the AST to a number of formats including basic SQL LIKE queries, PostgresQL fulltext and ParadeBD bm25 search.
+Converts the resulting AST to a number of formats including basic SQL LIKE queries, PostgresQL fulltext and ParadeBD bm25 search.
 
 ## Demo
 
@@ -38,7 +38,7 @@ const query = 'title:"winter boots" AND price:>100';
 const result = parseSearchInputQuery(query, schemas);
 
 if (result.type === 'SEARCH_QUERY') {
-  // Handle successful parse
+  // Handle successful parse where the expression is in AST format
   console.log(result.expression);
 } else {
   // Handle validation errors

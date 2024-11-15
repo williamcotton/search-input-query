@@ -4,7 +4,7 @@ A DSL reminiscent of other fulltext search query languages.
 
 Features a multi-pass recursive descent parser with support for multiple errors and type checking.
 
-Converts the AST to a number of formats including basic SQL LIKE queries, PostgresQL fulltext and ParadeBD mb25 search.
+Converts the AST to a number of formats including basic SQL LIKE queries, PostgresQL fulltext and ParadeBD bm25 search.
 
 ## Demo
 

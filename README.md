@@ -21,7 +21,10 @@ npm install search-input-query-parser
 ### Basic Usage
 
 ```typescript
-import { parseSearchInputQuery, type FieldSchema } from 'search-input-query-parser';
+import {
+  parseSearchInputQuery,
+  type FieldSchema
+} from 'search-input-query-parser';
 
 // Define your field schemas
 const schemas: FieldSchema[] = [

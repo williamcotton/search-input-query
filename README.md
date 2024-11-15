@@ -8,7 +8,7 @@ Converts the AST to a number of formats including basic SQL LIKE queries, Postgr
 
 ## Demo
 
-![sqi-demo](https://github.com/user-attachments/assets/74e2f722-4e14-457e-9053-8360f8ccb17d)
+![sqi-demo](https://github.com/user-attachments/assets/1463555b-91a3-4f7b-9e0e-4172dd78afdd)
 
 ## Parser
 

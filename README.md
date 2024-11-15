@@ -10,6 +10,39 @@ Converts the AST to a number of formats including basic SQL LIKE queries, Postgr
 
 ![sqi-demo](https://github.com/user-attachments/assets/74e2f722-4e14-457e-9053-8360f8ccb17d)
 
+## Parser
+
+### Installation
+
+```typescript
+npm install search-input-query-parser
+```
+
+### Basic Usage
+
+```typescript
+import { parseSearchInputQuery, type FieldSchema } from 'search-input-query-parser';
+
+// Define your field schemas
+const schemas: FieldSchema[] = [
+  { name: 'title', type: 'string' },
+  { name: 'price', type: 'number' },
+  { name: 'date', type: 'date' }
+];
+
+// Parse a search query
+const query = 'title:"winter boots" AND price:>100';
+const result = parseSearchInputQuery(query, schemas);
+
+if (result.type === 'SEARCH_QUERY') {
+  // Handle successful parse
+  console.log(result.expression);
+} else {
+  // Handle validation errors
+  console.log(result.errors);
+}
+```
+
 ## Features
 
 | Category | Expression Pattern | Example | Description |

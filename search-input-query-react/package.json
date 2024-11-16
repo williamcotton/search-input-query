@@ -25,6 +25,7 @@
   },
   "scripts": {
     "test": "jest",
+    "type-check": "tsc --noEmit",
     "build": "npm run build:esm && npm run build:cjs && npm run build:types",
     "build:esm": "tsc -p tsconfig.esm.json",
     "build:cjs": "tsc -p tsconfig.cjs.json",

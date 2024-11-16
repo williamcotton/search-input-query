@@ -1,5 +1,5 @@
 import React from "react";
-import { SearchType } from "../../search-input-query-parser/src/search-query-to-sql";
+import { SearchType } from "search-input-query-parser/search-query-to-sql";
 
 interface SearchTypeOption {
   value: SearchType;

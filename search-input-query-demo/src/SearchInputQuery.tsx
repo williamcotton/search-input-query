@@ -242,5 +242,3 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
     </div>
   );
 };
-
-export default SearchInputQuery;

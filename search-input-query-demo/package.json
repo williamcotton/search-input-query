@@ -1,29 +1,18 @@
 {
   "name": "search-input-query-react",
+  "private": true,
   "version": "0.1.0",
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
-  "types": "dist/index.d.ts",
-  "files": [
-    "dist"
-  ],
-  "exports": {
-    ".": {
-      "types": "./dist/SearchInputQuery.d.ts",
-      "import": "./dist/SearchInputQuery.js"
-    }
-  },
+  "type": "module",
   "scripts": {
-    "build": "tsc",
-    "prepublishOnly": "npm run build"
-  },
-  "peerDependencies": {
-    "react": "^18.0.0",
-    "react-dom": "^18.0.0",
-    "search-input-query-parser": "^0.1.2"
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.6.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "search-input-query-parser": "^0.1.2",
     "sql.js": "^1.12.0"
   },
@@ -37,8 +26,6 @@
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.14",
     "globals": "^15.11.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
     "typescript": "~5.6.2",
     "typescript-eslint": "^8.11.0",
     "vite": "^5.4.10"

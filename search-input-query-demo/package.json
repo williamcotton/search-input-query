@@ -1,7 +1,7 @@
 {
-  "name": "search-input-query-react",
+  "name": "search-input-query-demo",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -14,6 +14,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "search-input-query-parser": "^0.1.2",
+    "search-input-query-react": "^0.1.2",
     "sql.js": "^1.12.0"
   },
   "devDependencies": {

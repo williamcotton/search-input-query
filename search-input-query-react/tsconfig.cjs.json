@@ -1,8 +1,9 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "./dist/cjs",
-    "module": "ESNext",
+    "module": "Preserve",
     "moduleResolution": "bundler",
+    "outDir": "./dist/cjs",
+    "declaration": false
   }
 }

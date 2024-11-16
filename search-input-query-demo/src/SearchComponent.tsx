@@ -13,7 +13,7 @@ import { searchQueryToParadeDbSql } from "search-input-query-parser/search-query
 import { searchQueryToTsVectorSql } from "search-input-query-parser/search-query-to-sql";
 import type { ValidationError } from "search-input-query-parser/validator";
 import { ExpressionDescription } from "./ExpressionDescription";
-import { SearchInputQuery, EditorTheme } from "./SearchInputQuery";
+import { SearchInputQuery, EditorTheme } from "search-input-query-react";
 import SearchTypeSelector from "./SearchTypeSelector";
 import { type Product, searchProducts } from "./db-service";
 

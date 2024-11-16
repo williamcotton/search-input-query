@@ -1,6 +1,6 @@
 import type { editor, languages, Position, IRange } from "monaco-editor";
 
-import { FieldSchema } from "../../search-input-query-parser/src/parser";
+import { FieldSchema } from "search-input-query-parser";
 
 import { Monaco } from "./SearchInputQuery";
 

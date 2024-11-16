@@ -2,11 +2,16 @@
 
 # Search Input Query
 
-A DSL reminiscent of other fulltext string-based query languages such as [Elasticsearch](https://www.elastic.co/guide/en/elasticsearch/reference/8.15/query-dsl-query-string-query.html) and [Tantivy](https://docs.rs/tantivy/latest/tantivy/query/struct.QueryParser.html)
+A powerful search query language parser with SQL output support, inspired by [Elasticsearch](https://www.elastic.co/guide/en/elasticsearch/reference/8.15/query-dsl-query-string-query.html) and [Tantivy](https://docs.rs/tantivy/latest/tantivy/query/struct.QueryParser.html) query syntax. Features a multi-pass recursive descent parser with comprehensive error handling and type validation.
 
-Features a multi-pass recursive descent parser with support for multiple errors and type checking.
+## Key Features
 
-Converts the resulting AST to a number of formats including basic SQL LIKE queries, PostgresQL fulltext and ParadeBD bm25 search.
+- Multi-pass recursive descent parser
+- Comprehensive type checking and validation
+- Rich error reporting with position information
+- SQL output with support for multiple search strategies
+- React component with Monaco editor integration
+- Complete test coverage
 
 ## Demo
 

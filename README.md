@@ -10,6 +10,14 @@ Converts the resulting AST to a number of formats including basic SQL LIKE queri
 
 ![sqi-demo](https://github.com/user-attachments/assets/1463555b-91a3-4f7b-9e0e-4172dd78afdd)
 
+### Running Demo Locallay
+
+```bash
+cd search-input-query-demo
+npm install
+npm run dev
+```
+
 ## Parser
 
 ### Installation

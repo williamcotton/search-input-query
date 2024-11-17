@@ -2,7 +2,7 @@
 
 # Search Input Query
 
-A powerful search query language parser with SQL output support, inspired by [Elasticsearch](https://www.elastic.co/guide/en/elasticsearch/reference/8.15/query-dsl-query-string-query.html) and [Tantivy](https://docs.rs/tantivy/latest/tantivy/query/struct.QueryParser.html) query syntax. Features a multi-pass recursive descent parser with comprehensive error handling and type validation.
+A powerful search query language parser with SQL output support, inspired by [Elasticsearch](https://www.elastic.co/guide/en/elasticsearch/reference/8.15/query-dsl-query-string-query.html) and [Tantivy](https://docs.rs/tantivy/latest/tantivy/query/struct.QueryParser.html) query syntax.
 
 ## Key Features
 

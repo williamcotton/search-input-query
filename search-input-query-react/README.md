@@ -1,50 +1,83 @@
-# React + TypeScript + Vite
+## React Component
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+### Features
 
-Currently, two official plugins are available:
+- Monaco editor integration with syntax highlighting
+- Real-time validation and error highlighting
+- Auto-completion for fields and operators
+- Support for all query syntax features
+- Customizable editor theme
+- Error decorations with hover messages
+- Auto-closing quotes and brackets
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+The React component provides a rich editing experience with immediate feedback on query validity. It handles all parsing and validation internally, providing clean results through the `onSearchResult` callback.
 
-## Expanding the ESLint configuration
+### Installation
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
-
-- Configure the top-level `parserOptions` property like this:
-
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+```bash
+npm install search-input-query-react
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+### Basic Usage
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
+```typescript
+import { SearchInputQuery, EditorTheme } from 'search-input-query-react';
+import type { Expression, FieldSchema, ValidationError } from 'search-input-query-parser';
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
+// Define your schemas
+const schemas: FieldSchema[] = [
+  { name: 'title', type: 'string' },
+  { name: 'price', type: 'number' },
+  { name: 'date', type: 'date' }
+];
+
+// Define your editor theme (optional, defaults provided)
+const editorTheme: EditorTheme = {
+  base: 'vs',
+  inherit: true,
+  rules: [
+    { token: 'keyword', foreground: '#794938', fontStyle: 'bold' },
+    { token: 'field', foreground: '#234A97', fontStyle: 'bold' },
+    { token: 'value', foreground: '#0B6125' }
+    // Add more token rules as needed
+  ],
+  colors: {
+    'editor.foreground': '#24292F',
+    'editor.background': '#FFFFFF',
+    // Add more color settings as needed
+  }
+};
+
+function SearchComponent() {
+  const handleSearchResult = (result: {
+    expression: Expression | null;
+    parsedResult: string;
+    errors: ValidationError[];
+  }) => {
+    if (result.errors.length === 0) {
+      // Handle successful parse
+      console.log('Parsed expression:', result.expression);
+      console.log('Stringified result:', result.parsedResult);
+    } else {
+      // Handle validation errors
+      console.log('Parse errors:', result.errors);
+    }
+  };
+
+  return (
+    <SearchInputQuery 
+      schemas={schemas}
+      onSearchResult={handleSearchResult}
+      editorTheme={editorTheme}
+    />
+  );
+}
 ```
+
+### Component Props
+
+| Prop | Type | Required | Description |
+|------|------|----------|-------------|
+| `schemas` | `FieldSchema[]` | Yes | Array of field definitions for validation and auto-completion |
+| `onSearchResult` | `(result: SearchResult) => void` | Yes | Callback fired on query changes with parse results |
+| `editorTheme` | `EditorTheme` | No | Monaco editor theme configuration |

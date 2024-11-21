@@ -79,6 +79,8 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
     //   editor
     // );
 
+    editor.setValue(defaultValue);
+
     // Register custom language
     registerSearchQueryLanguage(monaco, editorTheme);
 

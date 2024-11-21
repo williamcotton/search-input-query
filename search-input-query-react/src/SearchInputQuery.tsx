@@ -6,7 +6,7 @@ import {
   Expression,
   parseSearchInputQuery,
   stringify,
-} from "search-input-query-parser";
+} from "../../search-input-query-parser/src/parser";
 import type { ValidationError } from "search-input-query-parser/validator";
 import { createCompletionItemProvider } from "./create-completion-item-provider";
 import { registerSearchQueryLanguage } from "./search-syntax";
@@ -18,6 +18,7 @@ interface SearchInputQueryProps {
     expression: Expression | null;
     parsedResult: string;
     errors: ValidationError[];
+    query: string;
   }) => void;
   // placeholder?: string;
   editorTheme: editor.IStandaloneThemeData;
@@ -144,6 +145,7 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
         expression: null,
         parsedResult: "",
         errors: [],
+        query: value,
       });
       updateDecorations([]);
       return;
@@ -156,6 +158,7 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
           expression: null,
           parsedResult: "",
           errors: result.errors,
+          query: value,
         });
         updateDecorations(result.errors);
       } else {
@@ -167,6 +170,7 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
           expression,
           parsedResult,
           errors: [],
+          query: value,
         });
       }
     } catch (err: unknown) {
@@ -195,6 +199,7 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
         expression: null,
         parsedResult: "",
         errors: [error],
+        query: value,
       });
       updateDecorations([error]);
     }

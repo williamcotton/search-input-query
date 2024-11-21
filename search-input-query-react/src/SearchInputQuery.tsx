@@ -22,6 +22,7 @@ interface SearchInputQueryProps {
   }) => void;
   // placeholder?: string;
   editorTheme: editor.IStandaloneThemeData;
+  defaultValue?: string;
 }
 
 export type EditorTheme = editor.IStandaloneThemeData;
@@ -38,6 +39,7 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
   onSearchResult,
   // placeholder,
   editorTheme,
+  defaultValue = "",
 }) => {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
@@ -216,7 +218,7 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
       <Editor
         height="2em"
         defaultLanguage="searchQuery"
-        defaultValue=""
+        defaultValue={defaultValue}
         theme="searchQueryTheme"
         onMount={handleEditorDidMount}
         onChange={onChange}

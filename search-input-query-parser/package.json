@@ -1,6 +1,6 @@
 {
   "name": "search-input-query-parser",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A parser for advanced search query syntax with field:value support",
   "keywords": [
     "search",

@@ -195,6 +195,7 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
           : err instanceof Error
           ? err.message
           : "An error occurred while parsing the query",
+        code: 0,
         position: isValidationError(err) ? err.position : 0,
         length: isValidationError(err) ? err.length : value.length,
       };

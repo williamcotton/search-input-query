@@ -1,6 +1,6 @@
 import { ParseResult } from "./first-pass-parser";
 import { TokenStream, currentToken, TokenType, advanceStream } from "./lexer";
-
+import { SearchQueryErrorCode } from "./validator";
 
 export const parseInValues = (
   stream: TokenStream,
@@ -13,6 +13,7 @@ export const parseInValues = (
   if (currentToken(currentStream).type !== TokenType.LPAREN) {
     throw {
       message: "Expected '(' after IN",
+      code: SearchQueryErrorCode.EXPECTED_LPAREN_AFTER_IN,
       position: inValuePosition, // Use the position passed from the caller
       length: 1,
     };
@@ -26,6 +27,7 @@ export const parseInValues = (
       if (values.length === 0) {
         throw {
           message: "IN operator requires at least one value",
+          code: SearchQueryErrorCode.EMPTY_IN_LIST,
           position: token.position,
           length: 1,
         };
@@ -43,6 +45,7 @@ export const parseInValues = (
         token.type !== TokenType.COMMA)) {
       throw {
         message: "Expected ',' or ')' after IN value",
+        code: SearchQueryErrorCode.EXPECTED_IN_SEPARATOR,
         position: token.position,
         length: 1,
       };
@@ -64,6 +67,7 @@ export const parseInValues = (
       }
       throw {
         message: "Expected ',' or ')' after IN value",
+        code: SearchQueryErrorCode.EXPECTED_IN_SEPARATOR,
         position: nextToken.position,
         length: 1,
       };

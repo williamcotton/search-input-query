@@ -1,5 +1,5 @@
 import { StringLiteral, WildcardPattern } from "./first-pass-parser";
-import { ValidationError } from "./validator";
+import { ValidationError, SearchQueryErrorCode } from "./validator";
 
 // Validates wildcard patterns
 
@@ -18,6 +18,7 @@ export const validateWildcard = (
       const secondStar = value.indexOf("*", firstStar + 1);
       errors.push({
         message: "Only one trailing wildcard (*) is allowed",
+        code: SearchQueryErrorCode.MULTIPLE_WILDCARDS,
         position: expr.position + secondStar,
         length: 1,
       });
@@ -25,6 +26,7 @@ export const validateWildcard = (
     if ((firstStar !== -1 && firstStar !== value.length - 1) && !value.endsWith("**")) {
       errors.push({
         message: "Wildcard (*) can only appear at the end of a term",
+        code: SearchQueryErrorCode.INVALID_WILDCARD_POSITION,
         position: expr.position + firstStar,
         length: 1,
       });
@@ -37,6 +39,7 @@ export const validateWildcard = (
     if (value.endsWith("**")) {
       errors.push({
         message: "Only one trailing wildcard (*) is allowed",
+        code: SearchQueryErrorCode.MULTIPLE_WILDCARDS,
         position: expr.position + value.length - 1,
         length: 1,
       });

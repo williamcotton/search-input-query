@@ -4,7 +4,11 @@ import {
   PositionLength,
   WildcardPattern as FirstPassWildcard,
 } from "./first-pass-parser";
-import { validateSearchQuery, ValidationError } from "./validator";
+import {
+  validateSearchQuery,
+  ValidationError,
+  SearchQueryErrorCode,
+} from "./validator";
 import { validateExpressionFields } from "./validate-expression-fields";
 import { transformToExpression } from "./transform-to-expression";
 
@@ -142,6 +146,7 @@ export const parseSearchInputQuery = (
     if (finalToken.type !== TokenType.EOF) {
       throw {
         message: 'Unexpected ")"',
+        code: SearchQueryErrorCode.UNEXPECTED_RIGHT_PAREN,
         position: finalToken.position,
         length: finalToken.length,
       };
@@ -210,6 +215,7 @@ export {
   type SearchQueryError,
   type Expression,
   type ValidationError,
+  SearchQueryErrorCode,
   type FieldSchema,
   type RangeOperator,
   type RangeExpression,

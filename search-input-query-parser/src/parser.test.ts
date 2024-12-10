@@ -7,6 +7,7 @@ import {
   stringify,
   ValidationError,
   FieldSchema,
+  SearchQueryErrorCode,
 } from "./parser";
 
 describe("Search Query Parser", () => {
@@ -103,6 +104,7 @@ describe("Search Query Parser", () => {
         {
           length: 6,
           message: "Expected field value",
+          code: SearchQueryErrorCode.EXPECTED_FIELD_VALUE,
           position: 0,
         },
       ]);
@@ -111,6 +113,7 @@ describe("Search Query Parser", () => {
         {
           length: 6,
           message: "Expected field value",
+          code: SearchQueryErrorCode.EXPECTED_FIELD_VALUE,
           position: 0,
         },
       ]);
@@ -119,6 +122,7 @@ describe("Search Query Parser", () => {
         {
           length: 1,
           message: "Expected field value",
+          code: SearchQueryErrorCode.EXPECTED_FIELD_VALUE,
           position: 6,
         },
       ]);
@@ -128,6 +132,7 @@ describe("Search Query Parser", () => {
         {
           length: 6,
           message: "Expected field value",
+          code: SearchQueryErrorCode.EXPECTED_FIELD_VALUE,
           position: 0,
         },
       ]);
@@ -136,6 +141,7 @@ describe("Search Query Parser", () => {
         {
           length: 15,
           message: "Missing field name",
+          code: SearchQueryErrorCode.MISSING_FIELD_NAME,
           position: 6,
         },
       ]);
@@ -437,6 +443,7 @@ describe("Search Query Parser", () => {
         {
           length: 6,
           message: "Expected field value",
+          code: SearchQueryErrorCode.EXPECTED_FIELD_VALUE,
           position: 0,
         },
       ]);
@@ -444,6 +451,7 @@ describe("Search Query Parser", () => {
         {
           length: 6,
           message: "Missing field name",
+          code: SearchQueryErrorCode.MISSING_FIELD_NAME,
           position: 0,
         },
       ]);
@@ -451,6 +459,7 @@ describe("Search Query Parser", () => {
         {
           length: 1,
           message: "Expected field value",
+          code: SearchQueryErrorCode.EXPECTED_FIELD_VALUE,
           position: 0,
         },
       ]);
@@ -458,11 +467,13 @@ describe("Search Query Parser", () => {
         {
           length: 6,
           message: "Expected field value",
+          code: SearchQueryErrorCode.EXPECTED_FIELD_VALUE,
           position: 0,
         },
         {
           length: 1,
           message: "Expected field value",
+          code: SearchQueryErrorCode.EXPECTED_FIELD_VALUE,
           position: 6,
         },
       ]);
@@ -473,6 +484,8 @@ describe("Search Query Parser", () => {
         {
           length: 3,
           message: "AND is a reserved word",
+          code: SearchQueryErrorCode.RESERVED_WORD_AS_FIELD,
+          value: "AND",
           position: 0,
         },
       ]);
@@ -480,6 +493,8 @@ describe("Search Query Parser", () => {
         {
           length: 2,
           message: "OR is a reserved word",
+          code: SearchQueryErrorCode.RESERVED_WORD_AS_FIELD,
+          value: "OR",
           position: 0,
         },
       ]);
@@ -490,6 +505,7 @@ describe("Search Query Parser", () => {
         {
           length: 1,
           message: 'Unexpected ")"',
+          code: SearchQueryErrorCode.UNEXPECTED_RIGHT_PAREN,
           position: 1,
         },
       ]);
@@ -497,6 +513,7 @@ describe("Search Query Parser", () => {
         {
           length: 1,
           message: 'Unexpected ")"',
+          code: SearchQueryErrorCode.UNEXPECTED_RIGHT_PAREN,
           position: 6,
         },
       ]);
@@ -507,6 +524,7 @@ describe("Search Query Parser", () => {
         {
           length: 6,
           message: "Unterminated quoted string",
+          code: SearchQueryErrorCode.UNTERMINATED_QUOTED_STRING,
           position: 6,
         },
       ]);
@@ -514,6 +532,7 @@ describe("Search Query Parser", () => {
         {
           length: 7,
           message: "Unterminated quoted string",
+          code: SearchQueryErrorCode.UNTERMINATED_QUOTED_STRING,
           position: 6,
         },
       ]);
@@ -521,6 +540,7 @@ describe("Search Query Parser", () => {
         {
           length: 8,
           message: "Unterminated quoted string",
+          code: SearchQueryErrorCode.UNTERMINATED_QUOTED_STRING,
           position: 6,
         },
       ]);
@@ -528,6 +548,7 @@ describe("Search Query Parser", () => {
         {
           length: 16,
           message: "Unterminated quoted string",
+          code: SearchQueryErrorCode.UNTERMINATED_QUOTED_STRING,
           position: 0,
         },
       ]);
@@ -538,6 +559,8 @@ describe("Search Query Parser", () => {
         {
           length: 3,
           message: "AND is a reserved word",
+          code: SearchQueryErrorCode.RESERVED_WORD,
+          value: "AND",
           position: 0,
         },
       ]);
@@ -545,6 +568,8 @@ describe("Search Query Parser", () => {
         {
           length: 2,
           message: "OR is a reserved word",
+          code: SearchQueryErrorCode.RESERVED_WORD,
+          value: "OR",
           position: 0,
         },
       ]);
@@ -552,6 +577,8 @@ describe("Search Query Parser", () => {
         {
           length: 3,
           message: "Unexpected token: AND",
+          code: SearchQueryErrorCode.UNEXPECTED_TOKEN,
+          value: "AND",
           position: 5,
         },
       ]);
@@ -559,6 +586,8 @@ describe("Search Query Parser", () => {
         {
           length: 2,
           message: "Unexpected token: OR",
+          code: SearchQueryErrorCode.UNEXPECTED_TOKEN,
+          value: "OR",
           position: 5,
         },
       ]);
@@ -566,6 +595,8 @@ describe("Search Query Parser", () => {
         {
           length: 3,
           message: "AND is a reserved word",
+          code: SearchQueryErrorCode.RESERVED_WORD,
+          value: "AND",
           position: 0,
         },
       ]);
@@ -573,6 +604,8 @@ describe("Search Query Parser", () => {
         {
           length: 2,
           message: "OR is a reserved word",
+          code: SearchQueryErrorCode.RESERVED_WORD,
+          value: "OR",
           position: 0,
         },
       ]);
@@ -585,16 +618,19 @@ describe("Search Query Parser", () => {
           {
             length: 6,
             message: "Expected field value",
+            code: SearchQueryErrorCode.EXPECTED_FIELD_VALUE,
             position: 29,
           },
           {
             length: 6,
             message: "Expected field value",
+            code: SearchQueryErrorCode.EXPECTED_FIELD_VALUE,
             position: 39,
           },
           {
             length: 5,
             message: "Expected field value",
+            code: SearchQueryErrorCode.EXPECTED_FIELD_VALUE,
             position: 51,
           },
         ]
@@ -605,6 +641,8 @@ describe("Search Query Parser", () => {
           {
             length: 3,
             message: "AND is a reserved word",
+            code: SearchQueryErrorCode.RESERVED_WORD,
+            value: "AND",
             position: 61,
           },
         ]
@@ -615,6 +653,7 @@ describe("Search Query Parser", () => {
       testSchemaErrorQuery("amount:>", [
         {
           message: "Expected range value",
+          code: SearchQueryErrorCode.EXPECTED_RANGE_VALUE,
           position: 8,
           length: 0,
         },
@@ -623,6 +662,7 @@ describe("Search Query Parser", () => {
       testSchemaErrorQuery("price:>=>100", [
         {
           message: "Invalid range operator",
+          code: SearchQueryErrorCode.INVALID_RANGE_OPERATOR,
           position: 6,
           length: 3,
         },
@@ -631,6 +671,7 @@ describe("Search Query Parser", () => {
       testSchemaErrorQuery("price:>..", [
         {
           message: "Invalid numeric value",
+          code: SearchQueryErrorCode.INVALID_NUMERIC_VALUE,
           position: 6,
           length: 1,
         },
@@ -639,6 +680,7 @@ describe("Search Query Parser", () => {
       testSchemaErrorQuery("price:...", [
         {
           message: "Invalid range format",
+          code: SearchQueryErrorCode.INVALID_RANGE_FORMAT,
           position: 6,
           length: 3,
         },
@@ -647,6 +689,7 @@ describe("Search Query Parser", () => {
       testSchemaErrorQuery("price:100...", [
         {
           message: "Invalid range format",
+          code: SearchQueryErrorCode.INVALID_RANGE_FORMAT,
           position: 6,
           length: 6,
         },
@@ -655,6 +698,7 @@ describe("Search Query Parser", () => {
       testSchemaErrorQuery("price:...200", [
         {
           message: "Invalid range format",
+          code: SearchQueryErrorCode.INVALID_RANGE_FORMAT,
           position: 6,
           length: 6,
         },
@@ -665,11 +709,13 @@ describe("Search Query Parser", () => {
       testSchemaErrorQuery("price:abc..def", [
         {
           message: "Invalid numeric value",
+          code: SearchQueryErrorCode.INVALID_NUMERIC_VALUE,
           position: 6,
           length: 3,
         },
         {
           message: "Invalid numeric value",
+          code: SearchQueryErrorCode.INVALID_NUMERIC_VALUE,
           position: 11,
           length: 3,
         },
@@ -678,6 +724,7 @@ describe("Search Query Parser", () => {
       testSchemaErrorQuery("amount:>abc", [
         {
           message: "Invalid numeric value",
+          code: SearchQueryErrorCode.INVALID_NUMERIC_VALUE,
           position: 8,
           length: 3,
         },
@@ -688,6 +735,7 @@ describe("Search Query Parser", () => {
       testSchemaErrorQuery("date:>not-a-date", [
         {
           message: "Invalid date format",
+          code: SearchQueryErrorCode.INVALID_DATE_FORMAT,
           position: 5,
           length: 11,
         },
@@ -696,6 +744,7 @@ describe("Search Query Parser", () => {
       testSchemaErrorQuery("date:2024-13-01..2024-12-31", [
         {
           message: "Invalid date format",
+          code: SearchQueryErrorCode.INVALID_DATE_FORMAT,
           position: 5,
           length: 22,
         },
@@ -708,6 +757,7 @@ describe("Search Query Parser", () => {
       testErrorQuery("test*test", [
         {
           message: "Wildcard (*) can only appear at the end of a term",
+          code: SearchQueryErrorCode.INVALID_WILDCARD_POSITION,
           position: 4,
           length: 1,
         },
@@ -716,11 +766,13 @@ describe("Search Query Parser", () => {
       testErrorQuery("te*st*", [
         {
           message: "Wildcard (*) can only appear at the end of a term",
+          code: SearchQueryErrorCode.INVALID_WILDCARD_POSITION,
           position: 2,
           length: 1,
         },
         {
           message: "Only one trailing wildcard (*) is allowed",
+          code: SearchQueryErrorCode.MULTIPLE_WILDCARDS,
           position: 5,
           length: 1,
         },
@@ -731,6 +783,7 @@ describe("Search Query Parser", () => {
       testErrorQuery("test**", [
         {
           message: "Only one trailing wildcard (*) is allowed",
+          code: SearchQueryErrorCode.MULTIPLE_WILDCARDS,
           position: 5,
           length: 1,
         },
@@ -739,6 +792,7 @@ describe("Search Query Parser", () => {
       testErrorQuery('"test"**', [
         {
           message: "Only one trailing wildcard (*) is allowed",
+          code: SearchQueryErrorCode.MULTIPLE_WILDCARDS,
           position: 7,
           length: 1,
         },
@@ -747,6 +801,7 @@ describe("Search Query Parser", () => {
       testErrorQuery('field:"test"**', [
         {
           message: "Only one trailing wildcard (*) is allowed",
+          code: SearchQueryErrorCode.MULTIPLE_WILDCARDS,
           position: 13,
           length: 1,
         },
@@ -757,11 +812,13 @@ describe("Search Query Parser", () => {
       testErrorQuery("fie*ld:value", [
         {
           message: "Invalid characters in field name",
+          code: SearchQueryErrorCode.INVALID_FIELD_CHARS,
           position: 0,
           length: 6,
         },
         {
           message: "Wildcard (*) can only appear at the end of a term",
+          code: SearchQueryErrorCode.INVALID_WILDCARD_POSITION,
           position: 3,
           length: 1,
         },
@@ -770,11 +827,13 @@ describe("Search Query Parser", () => {
       testErrorQuery("field*:value", [
         {
           message: "Invalid characters in field name",
+          code: SearchQueryErrorCode.INVALID_FIELD_CHARS,
           position: 0,
           length: 6,
         },
         {
           message: "Wildcard (*) can only appear at the end of a term",
+          code: SearchQueryErrorCode.INVALID_WILDCARD_POSITION,
           position: 5,
           length: 1,
         },
@@ -783,11 +842,13 @@ describe("Search Query Parser", () => {
       testErrorQuery("f*:value", [
         {
           message: "Invalid characters in field name",
+          code: SearchQueryErrorCode.INVALID_FIELD_CHARS,
           position: 0,
           length: 2,
         },
         {
           message: "Wildcard (*) can only appear at the end of a term",
+          code: SearchQueryErrorCode.INVALID_WILDCARD_POSITION,
           position: 1,
           length: 1,
         },
@@ -798,11 +859,13 @@ describe("Search Query Parser", () => {
       testErrorQuery('field*:"test"', [
         {
           message: "Invalid characters in field name",
+          code: SearchQueryErrorCode.INVALID_FIELD_CHARS,
           position: 0,
           length: 6,
         },
         {
           message: "Wildcard (*) can only appear at the end of a term",
+          code: SearchQueryErrorCode.INVALID_WILDCARD_POSITION,
           position: 5,
           length: 1,
         },
@@ -811,6 +874,7 @@ describe("Search Query Parser", () => {
       testErrorQuery('field:"test * test"**', [
         {
           message: "Only one trailing wildcard (*) is allowed",
+          code: SearchQueryErrorCode.MULTIPLE_WILDCARDS,
           position: 20,
           length: 1,
         },
@@ -819,11 +883,13 @@ describe("Search Query Parser", () => {
       testErrorQuery("test* field*:value", [
         {
           message: "Invalid characters in field name",
+          code: SearchQueryErrorCode.INVALID_FIELD_CHARS,
           position: 6,
           length: 6,
         },
         {
           message: "Wildcard (*) can only appear at the end of a term",
+          code: SearchQueryErrorCode.INVALID_WILDCARD_POSITION,
           position: 11,
           length: 1,
         },
@@ -892,11 +958,13 @@ describe("Search Query Parser", () => {
       expect((invalidNumResult as SearchQueryError).errors).toStrictEqual([
         {
           message: "Invalid numeric value",
+          code: SearchQueryErrorCode.INVALID_NUMERIC_VALUE,
           position: 9,
           length: 3,
         },
         {
           message: "Invalid numeric value",
+          code: SearchQueryErrorCode.INVALID_NUMERIC_VALUE,
           position: 13,
           length: 3,
         },
@@ -931,6 +999,7 @@ describe("Search Query Parser", () => {
         testErrorQuery("status:IN()", [
           {
             message: "IN operator requires at least one value",
+            code: SearchQueryErrorCode.EMPTY_IN_LIST,
             position: 10,
             length: 1,
           },
@@ -941,6 +1010,7 @@ describe("Search Query Parser", () => {
         testErrorQuery("status:IN(active,pending", [
           {
             message: "Expected ',' or ')' after IN value",
+            code: SearchQueryErrorCode.EXPECTED_IN_SEPARATOR,
             position: 5,
             length: 1,
           },
@@ -962,6 +1032,7 @@ describe("Search Query Parser", () => {
         testErrorQuery("status:IN(active pending)", [
           {
             message: "Expected ',' or ')' after IN value",
+            code: SearchQueryErrorCode.EXPECTED_IN_SEPARATOR,
             position: 17,
             length: 1,
           },
@@ -972,6 +1043,7 @@ describe("Search Query Parser", () => {
         testErrorQuery('status:IN("unclosed', [
           {
             message: "Unterminated quoted string",
+            code: SearchQueryErrorCode.UNTERMINATED_QUOTED_STRING,
             position: 10,
             length: 10,
           },

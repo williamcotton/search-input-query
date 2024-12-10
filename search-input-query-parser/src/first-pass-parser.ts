@@ -1,5 +1,6 @@
 import { TokenType, TokenStream, currentToken, advanceStream } from "./lexer";
 import { parsePrimary } from "./parse-primary";
+import { SearchQueryErrorCode } from "./validator";
 
 // First Pass AST types (from tokenizer/parser)
 export type PositionLength = {
@@ -94,6 +95,8 @@ export const parseExpression = (
       if (nextToken.type === TokenType.EOF) {
         throw {
           message: `Unexpected token: ${token.value}`,
+          code: SearchQueryErrorCode.UNEXPECTED_TOKEN,
+          value: token.value,
           position: token.position,
           length: token.length,
         };

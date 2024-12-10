@@ -1,3 +1,5 @@
+import { SearchQueryErrorCode } from "./validator";
+
 // Token types and data structures
 export enum TokenType {
   STRING = "STRING",
@@ -123,7 +125,12 @@ const tokenizeQuotedString = (
     }
   }
 
-  throw { message: "Unterminated quoted string", position, length };
+  throw {
+    message: "Unterminated quoted string",
+    code: SearchQueryErrorCode.UNTERMINATED_QUOTED_STRING,
+    position,
+    length,
+  };
 };
 
 const tokenizeString = (input: string, position: number): [Token, number] => {
@@ -317,6 +324,7 @@ export const tokenize = (input: string): Token[] => {
             throw {
               message:
                 "Invalid syntax: Missing operator or whitespace between terms",
+              code: SearchQueryErrorCode.MISSING_OPERATOR_OR_WHITESPACE,
               position: position,
               length: 1,
             };
@@ -333,6 +341,7 @@ export const tokenize = (input: string): Token[] => {
           throw {
             message:
               "Invalid syntax: Missing operator or whitespace between terms",
+            code: SearchQueryErrorCode.MISSING_OPERATOR_OR_WHITESPACE,
             position: newPos,
             length: 1,
           };

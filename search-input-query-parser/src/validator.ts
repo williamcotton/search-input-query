@@ -7,6 +7,8 @@ import { validateInExpression } from "./validate-in-expression";
 import { validateString } from "./validate-string";
 
 export enum SearchQueryErrorCode {
+  UNKNOWN_ERROR = 0,
+
   // Syntax Errors (1000-1999)
   UNTERMINATED_QUOTED_STRING = 1001,
   EXPECTED_FIELD_VALUE = 1002,

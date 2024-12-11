@@ -121,7 +121,7 @@ const SearchComponent = () => {
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : "An unknown error occurred";
-        setErrors([{ message: errorMessage, position: 0, length: 0 }]);
+        setErrors([{ message: errorMessage, code: 0, position: 0, length: 0 }]);
         setSqlQuery(null);
         setSearchResults([]);
       }

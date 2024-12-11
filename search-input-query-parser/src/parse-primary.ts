@@ -12,7 +12,7 @@ export const expectToken = (
   if (token.type !== type) {
     throw {
       message: message ? message : `Expected ${type}`,
-      code: SearchQueryErrorCode.EXPECTED_TOKEN,
+      code: SearchQueryErrorCode.SYNTAX_TOKEN_MISSING,
       value: type,
       position: token.position,
       length: token.length,
@@ -161,7 +161,7 @@ export const parsePrimary = (
     case TokenType.OR:
       throw {
         message: `${token.value} is a reserved word`,
-        code: SearchQueryErrorCode.RESERVED_WORD,
+        code: SearchQueryErrorCode.SYNTAX_KEYWORD_RESERVED,
         value: token.value,
         position: token.position,
         length: token.length,
@@ -170,7 +170,7 @@ export const parsePrimary = (
     case TokenType.RPAREN:
       throw {
         message: 'Unexpected ")"',
-        code: SearchQueryErrorCode.UNEXPECTED_RIGHT_PAREN,
+        code: SearchQueryErrorCode.SYNTAX_PARENTHESIS_UNEXPECTED,
         position: token.position,
         length: token.length,
       };
@@ -178,7 +178,7 @@ export const parsePrimary = (
     default:
       throw {
         message: "Unexpected token",
-        code: SearchQueryErrorCode.UNEXPECTED_TOKEN,
+        code: SearchQueryErrorCode.SYNTAX_TOKEN_UNEXPECTED,
         position: token.position,
         length: token.length,
       };

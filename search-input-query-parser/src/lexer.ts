@@ -127,7 +127,7 @@ const tokenizeQuotedString = (
 
   throw {
     message: "Unterminated quoted string",
-    code: SearchQueryErrorCode.UNTERMINATED_QUOTED_STRING,
+    code: SearchQueryErrorCode.SYNTAX_QUOTE_UNTERMINATED,
     position,
     length,
   };
@@ -324,7 +324,7 @@ export const tokenize = (input: string): Token[] => {
             throw {
               message:
                 "Invalid syntax: Missing operator or whitespace between terms",
-              code: SearchQueryErrorCode.MISSING_OPERATOR_OR_WHITESPACE,
+              code: SearchQueryErrorCode.SYNTAX_OPERATOR_OR_SPACE_MISSING,
               position: position,
               length: 1,
             };
@@ -341,7 +341,7 @@ export const tokenize = (input: string): Token[] => {
           throw {
             message:
               "Invalid syntax: Missing operator or whitespace between terms",
-            code: SearchQueryErrorCode.MISSING_OPERATOR_OR_WHITESPACE,
+            code: SearchQueryErrorCode.SYNTAX_OPERATOR_OR_SPACE_MISSING,
             position: newPos,
             length: 1,
           };

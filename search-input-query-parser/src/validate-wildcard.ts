@@ -18,7 +18,7 @@ export const validateWildcard = (
       const secondStar = value.indexOf("*", firstStar + 1);
       errors.push({
         message: "Only one trailing wildcard (*) is allowed",
-        code: SearchQueryErrorCode.MULTIPLE_WILDCARDS,
+        code: SearchQueryErrorCode.WILDCARD_MULTIPLE_NOT_PERMITTED,
         position: expr.position + secondStar,
         length: 1,
       });
@@ -26,7 +26,7 @@ export const validateWildcard = (
     if ((firstStar !== -1 && firstStar !== value.length - 1) && !value.endsWith("**")) {
       errors.push({
         message: "Wildcard (*) can only appear at the end of a term",
-        code: SearchQueryErrorCode.INVALID_WILDCARD_POSITION,
+        code: SearchQueryErrorCode.WILDCARD_POSITION_INVALID,
         position: expr.position + firstStar,
         length: 1,
       });
@@ -39,7 +39,7 @@ export const validateWildcard = (
     if (value.endsWith("**")) {
       errors.push({
         message: "Only one trailing wildcard (*) is allowed",
-        code: SearchQueryErrorCode.MULTIPLE_WILDCARDS,
+        code: SearchQueryErrorCode.WILDCARD_MULTIPLE_NOT_PERMITTED,
         position: expr.position + value.length - 1,
         length: 1,
       });

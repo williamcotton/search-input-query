@@ -24,7 +24,7 @@ export const validateString = (
   if (expr.value.endsWith(":")) {
     errors.push({
       message: "Expected field value",
-      code: SearchQueryErrorCode.EXPECTED_FIELD_VALUE,
+      code: SearchQueryErrorCode.SYNTAX_FIELD_VALUE_MISSING,
       position: expr.position,
       length: expr.length,
     });
@@ -35,7 +35,7 @@ export const validateString = (
   if (expr.value.startsWith(":")) {
     errors.push({
       message: "Missing field name",
-      code: SearchQueryErrorCode.MISSING_FIELD_NAME,
+      code: SearchQueryErrorCode.SYNTAX_FIELD_NAME_MISSING,
       position: expr.position,
       length: expr.length,
     });
@@ -50,7 +50,7 @@ export const validateString = (
     if (reservedWords.has(fieldName.toUpperCase())) {
       errors.push({
         message: `${fieldName} is a reserved word`,
-        code: SearchQueryErrorCode.RESERVED_WORD_AS_FIELD,
+        code: SearchQueryErrorCode.FIELD_NAME_RESERVED,
         value: fieldName,
         position: expr.position,
         length: fieldName.length,
@@ -62,7 +62,7 @@ export const validateString = (
     if (!/^[a-zA-Z0-9_-]+$/.test(fieldName)) {
       errors.push({
         message: "Invalid characters in field name",
-        code: SearchQueryErrorCode.INVALID_FIELD_CHARS,
+        code: SearchQueryErrorCode.FIELD_CHARS_INVALID,
         position: expr.position,
         length: fieldName.length,
       });
@@ -75,7 +75,7 @@ export const validateString = (
     reservedWords.has(expr.value.toUpperCase())) {
     errors.push({
       message: `${expr.value} is a reserved word`,
-      code: SearchQueryErrorCode.RESERVED_WORD_AS_FIELD,
+      code: SearchQueryErrorCode.FIELD_NAME_RESERVED,
       value: expr.value,
       position: expr.position,
       length: expr.length,

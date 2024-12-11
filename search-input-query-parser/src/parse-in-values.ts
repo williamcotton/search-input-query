@@ -13,7 +13,7 @@ export const parseInValues = (
   if (currentToken(currentStream).type !== TokenType.LPAREN) {
     throw {
       message: "Expected '(' after IN",
-      code: SearchQueryErrorCode.EXPECTED_LPAREN_AFTER_IN,
+      code: SearchQueryErrorCode.IN_LPAREN_MISSING,
       position: inValuePosition, // Use the position passed from the caller
       length: 1,
     };
@@ -27,7 +27,7 @@ export const parseInValues = (
       if (values.length === 0) {
         throw {
           message: "IN operator requires at least one value",
-          code: SearchQueryErrorCode.EMPTY_IN_LIST,
+          code: SearchQueryErrorCode.IN_LIST_EMPTY,
           position: token.position,
           length: 1,
         };
@@ -45,7 +45,7 @@ export const parseInValues = (
         token.type !== TokenType.COMMA)) {
       throw {
         message: "Expected ',' or ')' after IN value",
-        code: SearchQueryErrorCode.EXPECTED_IN_SEPARATOR,
+        code: SearchQueryErrorCode.IN_SEPARATOR_MISSING,
         position: token.position,
         length: 1,
       };
@@ -67,7 +67,7 @@ export const parseInValues = (
       }
       throw {
         message: "Expected ',' or ')' after IN value",
-        code: SearchQueryErrorCode.EXPECTED_IN_SEPARATOR,
+        code: SearchQueryErrorCode.IN_SEPARATOR_MISSING,
         position: nextToken.position,
         length: 1,
       };

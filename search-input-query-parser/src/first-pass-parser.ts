@@ -90,12 +90,11 @@ export const parseExpression = (
 
       const operator = token.type;
       const nextStream = advanceStream(result.stream);
-
       const nextToken = currentToken(nextStream);
       if (nextToken.type === TokenType.EOF) {
         throw {
           message: `Unexpected token: ${token.value}`,
-          code: SearchQueryErrorCode.UNEXPECTED_TOKEN,
+          code: SearchQueryErrorCode.SYNTAX_TOKEN_UNEXPECTED,
           value: token.value,
           position: token.position,
           length: token.length,

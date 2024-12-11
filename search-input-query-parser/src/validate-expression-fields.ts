@@ -12,7 +12,7 @@ const validateNumber = (
   if (isNaN(Number(value))) {
     errors.push({
       message: "Invalid numeric value",
-      code: SearchQueryErrorCode.INVALID_NUMERIC_VALUE,
+      code: SearchQueryErrorCode.VALUE_NUMERIC_INVALID,
       position,
       length: value.length,
     });
@@ -45,7 +45,7 @@ const validateNumericRange = (
     if (startNum > endNum) {
       errors.push({
         message: "Range start must be less than or equal to range end",
-        code: SearchQueryErrorCode.RANGE_START_GREATER_THAN_END,
+        code: SearchQueryErrorCode.VALUE_RANGE_START_EXCEEDS_END,
         position: basePosition,
         length: start.length + 2 + end.length,
       });
@@ -79,7 +79,7 @@ const validateFieldValue = (
       if (!allowedFields.has(expr.field.toLowerCase())) {
         errors.push({
           message: `Invalid field: "${expr.field}"`,
-          code: SearchQueryErrorCode.INVALID_FIELD_NAME,
+          code: SearchQueryErrorCode.FIELD_NAME_INVALID,
           value: expr.field,
           position: expr.position,
           length: expr.field.length,
@@ -95,7 +95,7 @@ const validateFieldValue = (
               if (isNaN(Number(value))) {
                 errors.push({
                   message: "Invalid numeric value",
-                  code: SearchQueryErrorCode.INVALID_NUMERIC_VALUE,
+                  code: SearchQueryErrorCode.VALUE_NUMERIC_INVALID,
                   position:
                     expr.position +
                     expr.field.length +
@@ -109,7 +109,7 @@ const validateFieldValue = (
               if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
                 errors.push({
                   message: "Invalid date format",
-                  code: SearchQueryErrorCode.INVALID_DATE_FORMAT,
+                  code: SearchQueryErrorCode.VALUE_DATE_FORMAT_INVALID,
                   position:
                     expr.position +
                     expr.field.length +
@@ -130,7 +130,7 @@ const validateFieldValue = (
       const schema = schemas.get(expr.prefix.toLowerCase());
       if (schema?.type === "number" || schema?.type === "date") {
         errors.push({
-          code: SearchQueryErrorCode.WILDCARD_NOT_ALLOWED,
+          code: SearchQueryErrorCode.VALUE_WILDCARD_NOT_PERMITTED,
           value: schema.type,
           message: `Wildcards are not allowed for ${schema.type} fields`,
           position: expr.position,
@@ -150,7 +150,7 @@ const validateFieldValue = (
       if (!allowedFields.has(fieldName.toLowerCase()) && colonIndex > 0) {
         errors.push({
           message: `Invalid field: "${fieldName}"`,
-          code: SearchQueryErrorCode.INVALID_FIELD_NAME,
+          code: SearchQueryErrorCode.FIELD_NAME_INVALID,
           value: fieldName,
           position: expr.position,
           length: colonIndex,
@@ -160,7 +160,7 @@ const validateFieldValue = (
       if (!value) {
         errors.push({
           message: "Expected field value",
-          code: SearchQueryErrorCode.EXPECTED_FIELD_VALUE,
+          code: SearchQueryErrorCode.SYNTAX_VALUE_MISSING,
           position: expr.position,
           length: colonIndex + 1,
         });
@@ -170,7 +170,7 @@ const validateFieldValue = (
       if (value.startsWith(":")) {
         errors.push({
           message: "Missing field name",
-          code: SearchQueryErrorCode.MISSING_FIELD_NAME,
+          code: SearchQueryErrorCode.SYNTAX_FIELD_NAME_MISSING,
           position: expr.position,
           length: value.length + colonIndex + 1,
         });
@@ -187,7 +187,7 @@ const validateFieldValue = (
           if (value === ".." || value.includes("...")) {
             errors.push({
               message: "Invalid range format",
-              code: SearchQueryErrorCode.INVALID_RANGE_FORMAT,
+              code: SearchQueryErrorCode.VALUE_RANGE_FORMAT_INVALID,
               position: valueStartPosition,
               length: value.length,
             });
@@ -207,7 +207,7 @@ const validateFieldValue = (
           if (invalidOp.test(value)) {
             errors.push({
               message: "Invalid range operator",
-              code: SearchQueryErrorCode.INVALID_RANGE_OPERATOR,
+              code: SearchQueryErrorCode.VALUE_RANGE_OPERATOR_INVALID,
               position: valueStartPosition,
               length: 3,
             });
@@ -217,7 +217,7 @@ const validateFieldValue = (
           if (!compValue) {
             errors.push({
               message: "Expected range value",
-              code: SearchQueryErrorCode.EXPECTED_RANGE_VALUE,
+              code: SearchQueryErrorCode.VALUE_RANGE_MISSING,
               position: valueStartPosition + operator.length,
               length: 0,
             });
@@ -255,7 +255,7 @@ const validateFieldValue = (
           if (!dateValidator(start) || !dateValidator(end)) {
             errors.push({
               message: "Invalid date format",
-              code: SearchQueryErrorCode.INVALID_DATE_FORMAT,
+              code: SearchQueryErrorCode.VALUE_DATE_FORMAT_INVALID,
               position: valueStartPosition,
               length: value.length,
             });
@@ -268,7 +268,7 @@ const validateFieldValue = (
             if (!dateValidator(dateStr)) {
               errors.push({
                 message: "Invalid date format",
-                code: SearchQueryErrorCode.INVALID_DATE_FORMAT,
+                code: SearchQueryErrorCode.VALUE_DATE_FORMAT_INVALID,
                 position: valueStartPosition,
                 length: value.length,
               });
@@ -277,7 +277,7 @@ const validateFieldValue = (
           } else if (!dateValidator(value)) {
             errors.push({
               message: "Invalid date format",
-              code: SearchQueryErrorCode.INVALID_DATE_FORMAT,
+              code: SearchQueryErrorCode.VALUE_DATE_FORMAT_INVALID,
               position: valueStartPosition,
               length: value.length,
             });

@@ -146,7 +146,7 @@ export const parseSearchInputQuery = (
     if (finalToken.type !== TokenType.EOF) {
       throw {
         message: 'Unexpected ")"',
-        code: SearchQueryErrorCode.UNEXPECTED_RIGHT_PAREN,
+        code: SearchQueryErrorCode.SYNTAX_PARENTHESIS_UNEXPECTED,
         position: finalToken.position,
         length: finalToken.length,
       };

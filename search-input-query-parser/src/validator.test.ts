@@ -27,7 +27,7 @@ describe("Search Query Validator", () => {
       expect(validateQuery("special@field:value")).toEqual([
         {
           message: "Invalid characters in field name",
-          code: SearchQueryErrorCode.INVALID_FIELD_CHARS,
+          code: SearchQueryErrorCode.FIELD_CHARS_INVALID,
           position: 0,
           length: 13,
         },
@@ -38,7 +38,7 @@ describe("Search Query Validator", () => {
       expect(validateQuery("valid:value special!:value")).toEqual([
         {
           message: "Invalid characters in field name",
-          code: SearchQueryErrorCode.INVALID_FIELD_CHARS,
+          code: SearchQueryErrorCode.FIELD_CHARS_INVALID,
           position: 12,
           length: 8,
         },
@@ -51,7 +51,7 @@ describe("Search Query Validator", () => {
       expect(validateQuery("field:")).toEqual([
         {
           message: "Expected field value",
-          code: SearchQueryErrorCode.EXPECTED_FIELD_VALUE,
+          code: SearchQueryErrorCode.SYNTAX_FIELD_VALUE_MISSING,
           position: 0,
           length: 6,
         },
@@ -67,7 +67,7 @@ describe("Search Query Validator", () => {
       expect(validateQuery(":value")).toEqual([
         {
           message: "Missing field name",
-          code: SearchQueryErrorCode.MISSING_FIELD_NAME,
+          code: SearchQueryErrorCode.SYNTAX_FIELD_NAME_MISSING,
           position: 0,
           length: 6,
         },
@@ -80,7 +80,7 @@ describe("Search Query Validator", () => {
       expect(validateQuery("AND:value")).toEqual([
         {
           message: "AND is a reserved word",
-          code: SearchQueryErrorCode.RESERVED_WORD_AS_FIELD,
+          code: SearchQueryErrorCode.FIELD_NAME_RESERVED,
           value: "AND",
           position: 0,
           length: 3,
@@ -90,7 +90,7 @@ describe("Search Query Validator", () => {
       expect(validateQuery("OR:value")).toEqual([
         {
           message: "OR is a reserved word",
-          code: SearchQueryErrorCode.RESERVED_WORD_AS_FIELD,
+          code: SearchQueryErrorCode.FIELD_NAME_RESERVED,
           value: "OR",
           position: 0,
           length: 2,
@@ -116,7 +116,7 @@ describe("Search Query Validator", () => {
       expect(validateQuery("(field:value AND invalid!:value)")).toEqual([
         {
           message: "Invalid characters in field name",
-          code: SearchQueryErrorCode.INVALID_FIELD_CHARS,
+          code: SearchQueryErrorCode.FIELD_CHARS_INVALID,
           position: 17,
           length: 8,
         },
@@ -127,14 +127,14 @@ describe("Search Query Validator", () => {
       expect(validateQuery("AND:test OR invalid!:value")).toEqual([
         {
           message: "AND is a reserved word",
-          code: SearchQueryErrorCode.RESERVED_WORD_AS_FIELD,
+          code: SearchQueryErrorCode.FIELD_NAME_RESERVED,
           value: "AND",
           position: 0,
           length: 3,
         },
         {
           message: "Invalid characters in field name",
-          code: SearchQueryErrorCode.INVALID_FIELD_CHARS,
+          code: SearchQueryErrorCode.FIELD_CHARS_INVALID,
           position: 12,
           length: 8,
         },
@@ -147,7 +147,7 @@ describe("Search Query Validator", () => {
       ).toEqual([
         {
           message: "OR is a reserved word",
-          code: SearchQueryErrorCode.RESERVED_WORD_AS_FIELD,
+          code: SearchQueryErrorCode.FIELD_NAME_RESERVED,
           value: "OR",
           position: 18,
           length: 2,
@@ -169,13 +169,13 @@ describe("Search Query Validator", () => {
       expect(validateQuery("field::value")).toEqual([
         {
           message: "Expected field value",
-          code: SearchQueryErrorCode.EXPECTED_FIELD_VALUE,
+          code: SearchQueryErrorCode.SYNTAX_FIELD_VALUE_MISSING,
           position: 0,
           length: 6,
         },
         {
           message: "Missing field name",
-          code: SearchQueryErrorCode.MISSING_FIELD_NAME,
+          code: SearchQueryErrorCode.SYNTAX_FIELD_NAME_MISSING,
           position: 6,
           length: 6,
         }
@@ -186,7 +186,7 @@ describe("Search Query Validator", () => {
       expect(validateQuery("@#$:value")).toEqual([
         {
           message: "Invalid characters in field name",
-          code: SearchQueryErrorCode.INVALID_FIELD_CHARS,
+          code: SearchQueryErrorCode.FIELD_CHARS_INVALID,
           position: 0,
           length: 3,
         },
@@ -199,13 +199,13 @@ describe("Search Query Validator", () => {
       expect(validateQuery(complexQuery)).toEqual([
         {
           message: "Invalid characters in field name",
-          code: SearchQueryErrorCode.INVALID_FIELD_CHARS,
+          code: SearchQueryErrorCode.FIELD_CHARS_INVALID,
           position: 32,
           length: 8,
         },
         {
           message: "OR is a reserved word",
-          code: SearchQueryErrorCode.RESERVED_WORD_AS_FIELD,
+          code: SearchQueryErrorCode.FIELD_NAME_RESERVED,
           value: "OR",
           position: 51,
           length: 2,

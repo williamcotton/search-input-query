@@ -1,6 +1,6 @@
 {
   "name": "search-input-query-react",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "keywords": [
     "search",
     "parser",
@@ -35,11 +35,11 @@
   "peerDependencies": {
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
-    "search-input-query-parser": "^0.3.0"
+    "search-input-query-parser": "^0.4.0"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.6.0",
-    "search-input-query-parser": "^0.3.0",
+    "search-input-query-parser": "^0.4.0",
     "sql.js": "^1.12.0"
   },
   "devDependencies": {

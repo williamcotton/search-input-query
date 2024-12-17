@@ -28,7 +28,8 @@ import type { Expression, FieldSchema, ValidationError } from 'search-input-quer
 const schemas: FieldSchema[] = [
   { name: 'title', type: 'string' },
   { name: 'price', type: 'number' },
-  { name: 'date', type: 'date' }
+  { name: 'date', type: 'date' },
+  { name: 'in_stock', type: 'boolean' }
 ];
 
 // Define your editor theme (optional, defaults provided)

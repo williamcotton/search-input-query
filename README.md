@@ -45,7 +45,8 @@ import {
 const schemas: FieldSchema[] = [
   { name: 'title', type: 'string' },
   { name: 'price', type: 'number' },
-  { name: 'date', type: 'date' }
+  { name: 'date', type: 'date' },
+  { name: 'in_stock', type: 'boolean' }
 ];
 
 // Parse a search query
@@ -79,7 +80,8 @@ import type { Expression, FieldSchema, ValidationError } from 'search-input-quer
 const schemas: FieldSchema[] = [
   { name: 'title', type: 'string' },
   { name: 'price', type: 'number' },
-  { name: 'date', type: 'date' }
+  { name: 'date', type: 'date' },
+  { name: 'in_stock', type: 'boolean' }
 ];
 
 // Define your editor theme (optional, defaults provided)
@@ -168,7 +170,8 @@ const searchableColumns = ['title', 'description'];
 const schemas: FieldSchema[] = [
   { name: 'title', type: 'string' },
   { name: 'price', type: 'number' },
-  { name: 'date', type: 'date' }
+  { name: 'date', type: 'date' },
+  { name: 'in_stock', type: 'boolean' }
 ];
 
 // Convert a search query to SQL

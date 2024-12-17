@@ -33,6 +33,7 @@ describe("Search Query Parser", () => {
     { name: "amount", type: "number" },
     { name: "date", type: "date" },
     { name: "title", type: "string" },
+    { name: "in_stock", type: "boolean" },
   ];
 
   const testSchemaQuery = (input: string, expected: string) => {
@@ -330,6 +331,29 @@ describe("Search Query Parser", () => {
       testValidQuery(
         '(category:"winter gear" AND (type:boots OR type:shoes)) OR (category:"summer gear" AND (type:sandals OR type:slippers)) AND in_stock:true',
         "((category:winter gear AND (type:boots OR type:shoes)) OR ((category:summer gear AND (type:sandals OR type:slippers)) AND in_stock:true))"
+      );
+    });
+  });
+
+  describe("Boolean field support", () => {
+    test("parses boolean values", () => {
+      testSchemaQuery("in_stock:true", "in_stock:true");
+      testSchemaQuery("in_stock:false", "in_stock:false");
+    });
+
+    test("parses boolean fields with other fields", () => {
+      testSchemaQuery("title:red AND in_stock:true", "(title:red AND in_stock:true)");
+      testSchemaQuery("in_stock:true AND amount:42", "(in_stock:true AND amount:42)");
+    });
+
+    test("parses boolean fields with complex expressions", () => {
+      testSchemaQuery(
+        "title:red AND in_stock:true OR amount:42",
+        "((title:red AND in_stock:true) OR amount:42)"
+      );
+      testSchemaQuery(
+        "title:red AND (in_stock:true OR amount:42)",
+        "(title:red AND (in_stock:true OR amount:42))"
       );
     });
   });
@@ -747,6 +771,17 @@ describe("Search Query Parser", () => {
           code: SearchQueryErrorCode.VALUE_DATE_FORMAT_INVALID,
           position: 5,
           length: 22,
+        },
+      ]);
+    });
+
+    test("handles invalid boolean values", () => {
+      testSchemaErrorQuery("in_stock:maybe", [
+        {
+          message: "Invalid boolean value",
+          code: SearchQueryErrorCode.VALUE_BOOLEAN_INVALID,
+          position: 9,
+          length: 5,
         },
       ]);
     });

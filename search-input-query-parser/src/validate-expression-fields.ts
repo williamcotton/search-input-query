@@ -119,6 +119,20 @@ const validateFieldValue = (
                 });
               }
               break;
+            case "boolean":
+              if (!["true", "false"].includes(value.toLowerCase())) {
+                errors.push({
+                  message: "Invalid boolean value",
+                  code: SearchQueryErrorCode.VALUE_BOOLEAN_INVALID,
+                  position:
+                    expr.position +
+                    expr.field.length +
+                    3 +
+                    index * (value.length + 1),
+                  length: value.length,
+                });
+              }
+              break;
           }
         });
       }
@@ -128,7 +142,7 @@ const validateFieldValue = (
     case "WILDCARD": {
       // For wildcard patterns, validate against field type constraints
       const schema = schemas.get(expr.prefix.toLowerCase());
-      if (schema?.type === "number" || schema?.type === "date") {
+      if (schema?.type === "number" || schema?.type === "date" || schema?.type === "boolean") {
         errors.push({
           code: SearchQueryErrorCode.VALUE_WILDCARD_NOT_PERMITTED,
           value: schema.type,
@@ -283,6 +297,16 @@ const validateFieldValue = (
             });
             return;
           }
+        }
+      }
+      if (schema.type === "boolean") {
+        if (!["true", "false"].includes(value.toLowerCase())) {
+          errors.push({
+            message: "Invalid boolean value",
+            code: SearchQueryErrorCode.VALUE_BOOLEAN_INVALID,
+            position: valueStartPosition,
+            length: value.length,
+          });
         }
       }
       break;

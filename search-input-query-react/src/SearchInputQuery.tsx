@@ -111,6 +111,11 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
       },
     });
 
+    monaco.editor.addKeybindingRule({
+      keybinding: monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF,
+      command: null,
+    });
+
     editor.focus();
   };
 

@@ -11,16 +11,17 @@
     "jsx": "react",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "moduleDetection": "force"
+    "moduleDetection": "force",
+    "allowJs": true
   },
   "include": [
-    "./src/*.ts",
-    "./src/*.tsx"
+    "./src/**/*.ts",
+    "./src/**/*.tsx",
+    "./src/**/*.test.ts",
+    "./src/**/*.test.tsx"
   ],
   "exclude": [
     "node_modules",
-    "dist",
-    "**/*.test.ts",
-    "jest.config.ts"
+    "dist"
   ]
 }

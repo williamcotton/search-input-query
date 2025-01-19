@@ -61,6 +61,7 @@ const mockMonaco = {
   editor: {
     defineTheme: jest.fn(),
     setThemeData: jest.fn(),
+    addKeybindingRule: jest.fn(),
   },
   languages: {
     register: jest.fn(),
@@ -73,8 +74,15 @@ const mockMonaco = {
       Value: 3,
     },
   },
+  KeyMod: {
+    CtrlCmd: 2048,
+    Shift: 1024,
+    Alt: 512,
+    WinCtrl: 256
+  },
   KeyCode: {
     Enter: 13,
+    KeyF: 33
   },
   Range: jest.fn(),
 };

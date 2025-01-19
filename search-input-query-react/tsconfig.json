@@ -4,5 +4,7 @@
     "outDir": "./dist/cjs",
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "noEmit": true
   }
 }

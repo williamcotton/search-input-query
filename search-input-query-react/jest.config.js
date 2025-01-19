@@ -1,8 +1,18 @@
 module.exports = {
-  preset: "ts-jest",
-  testEnvironment: "jsdom",
-  moduleNameMapper: {
-    "\\.(css|less|scss|sass)$": "identity-obj-proxy", // For handling CSS imports
+  preset: 'ts-jest',
+  testEnvironment: 'jsdom',
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
+  transform: {
+    '^.+\\.(ts|tsx)$': ['ts-jest', {
+      tsconfig: 'tsconfig.json',
+      useESM: true,
+    }],
   },
-  setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"], // Optional setup file
+  moduleNameMapper: {
+    '^(\\.{1,2}/.*)\\.js$': '$1',
+  },
+  extensionsToTreatAsEsm: ['.ts', '.tsx'],
+  testRegex: 'src/.*\\.(test|spec)\\.(jsx?|tsx?)$',
+  setupFilesAfterEnv: ['@testing-library/jest-dom'],
+  testPathIgnorePatterns: ['/node_modules/', '/dist/'],
 };

@@ -13,36 +13,36 @@ import { validateExpressionFields } from "./validate-expression-fields";
 import { transformToExpression } from "./transform-to-expression";
 
 // Schema types for range queries
-interface FieldSchema {
+export interface FieldSchema {
   name: string;
   type: "string" | "number" | "date" | "boolean";
 }
 
 // Second Pass AST types (semantic analysis)
-type SearchTerm = {
+export type SearchTerm = {
   readonly type: "SEARCH_TERM";
   readonly value: string;
 } & PositionLength;
 
-type WildcardPattern = {
+export type WildcardPattern = {
   readonly type: "WILDCARD";
   readonly prefix: string;
   readonly quoted: boolean;
 } & PositionLength;
 
-type Field = {
+export type Field = {
   readonly type: "FIELD";
   readonly value: string;
 } & PositionLength;
 
-type Value = {
+export type Value = {
   readonly type: "VALUE";
   readonly value: string;
 } & PositionLength;
 
-type RangeOperator = ">=" | ">" | "<=" | "<" | "BETWEEN";
+export type RangeOperator = ">=" | ">" | "<=" | "<" | "BETWEEN";
 
-type RangeExpression = {
+export type RangeExpression = {
   readonly type: "RANGE";
   readonly field: Field;
   readonly operator: RangeOperator;
@@ -56,30 +56,30 @@ export type FieldValue = {
   readonly value: Value;
 };
 
-type And = {
+export type And = {
   readonly type: "AND";
   readonly left: Expression;
   readonly right: Expression;
 } & PositionLength;
 
-type Or = {
+export type Or = {
   readonly type: "OR";
   readonly left: Expression;
   readonly right: Expression;
 } & PositionLength;
 
-type Not = {
+export type Not = {
   readonly type: "NOT";
   readonly expression: Expression;
 } & PositionLength;
 
-type InExpression = {
+export type InExpression = {
   readonly type: "IN";
   readonly field: Field;
   readonly values: Value[];
 } & PositionLength;
 
-type Expression =
+export type Expression =
   | SearchTerm
   | WildcardPattern
   | FieldValue
@@ -89,19 +89,19 @@ type Expression =
   | Not
   | InExpression;
 
-type SearchQuery = {
+export type SearchQuery = {
   readonly type: "SEARCH_QUERY";
   readonly expression: Expression | null;
 };
 
-type SearchQueryError = {
+export type SearchQueryError = {
   readonly type: "SEARCH_QUERY_ERROR";
   readonly expression: null;
   readonly errors: ValidationError[];
 };
 
 // Helper function to stringify expressions
-const stringify = (expr: Expression): string => {
+export const stringify = (expr: Expression): string => {
   switch (expr.type) {
     case "SEARCH_TERM":
       return expr.value;
@@ -210,16 +210,3 @@ export const parseSearchInputQuery = (
   }
 };
 
-export {
-  type SearchQuery,
-  type SearchQueryError,
-  type Expression,
-  type ValidationError,
-  SearchQueryErrorCode,
-  type FieldSchema,
-  type RangeOperator,
-  type RangeExpression,
-  type WildcardPattern,
-  type Value,
-  stringify,
-};

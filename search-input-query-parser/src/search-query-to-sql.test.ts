@@ -320,6 +320,36 @@ describe("Search Query to SQL Converter", () => {
       );
       testIlikeConversion("amount:<-10", "amount < $1", [-10]);
     });
+
+    test("handles date year shorthand format", () => {
+      testIlikeConversion(
+        "date:2024",
+        "date BETWEEN $1 AND $2",
+        ["2024-01-01", "2024-12-31"]
+      );
+    });
+
+    test("handles date month shorthand format", () => {
+      testIlikeConversion(
+        "date:2024-02",
+        "date BETWEEN $1 AND $2",
+        ["2024-02-01", "2024-02-29"] // 2024 is a leap year
+      );
+      
+      testIlikeConversion(
+        "date:2023-04",
+        "date BETWEEN $1 AND $2",
+        ["2023-04-01", "2023-04-30"]
+      );
+    });
+
+    test("handles date shorthand formats with comparison operators", () => {
+      testIlikeConversion(
+        "date:>=2024 AND date:<2025",
+        "(date >= $1 AND date < $2)",
+        ["2024-01-01", "2025-12-31"]
+      );
+    });
   });
 
   describe("tsvector Search Type", () => {
@@ -371,6 +401,36 @@ describe("Search Query to SQL Converter", () => {
         'boots AND "winter gear"',
         "((to_tsvector('english', title) || to_tsvector('english', description) || to_tsvector('english', content)) @@ plainto_tsquery('english', $1) AND (to_tsvector('english', title) || to_tsvector('english', description) || to_tsvector('english', content)) @@ plainto_tsquery('english', $2))",
         ["boots", "winter gear"]
+      );
+    });
+
+    test("handles date year shorthand format with tsvector", () => {
+      testTsvectorConversion(
+        "date:2024",
+        "date BETWEEN $1 AND $2",
+        ["2024-01-01", "2024-12-31"]
+      );
+    });
+
+    test("handles date month shorthand format with tsvector", () => {
+      testTsvectorConversion(
+        "date:2024-02",
+        "date BETWEEN $1 AND $2",
+        ["2024-02-01", "2024-02-29"] // 2024 is a leap year
+      );
+      
+      testTsvectorConversion(
+        "date:2023-04",
+        "date BETWEEN $1 AND $2",
+        ["2023-04-01", "2023-04-30"]
+      );
+    });
+
+    test("handles date shorthand formats with comparison operators with tsvector", () => {
+      testTsvectorConversion(
+        "date:>=2024 AND date:<2025",
+        "(date >= $1 AND date < $2)",
+        ["2024-01-01", "2025-12-31"]
       );
     });
   });

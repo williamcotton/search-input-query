@@ -174,6 +174,29 @@ const fieldValueToSql = (
 
   switch (schema?.type) {
     case "date": {
+      // Handle year format (YYYY)
+      if (/^\d{4}$/.test(cleanedValue)) {
+        const year = cleanedValue;
+        const [param1, state1] = nextParam(state);
+        const [param2, state2] = nextParam(state1);
+        return [
+          `${field} @@@ '[' || ${param1} || ' TO ' || ${param2} || ']'`,
+          addValue(addValue(state2, `${year}-01-01`), `${year}-12-31`),
+        ];
+      }
+      
+      // Handle year-month format (YYYY-MM)
+      if (/^\d{4}-\d{2}$/.test(cleanedValue)) {
+        const [year, month] = cleanedValue.split('-');
+        const lastDay = new Date(Number(year), Number(month), 0).getDate();
+        const [param1, state1] = nextParam(state);
+        const [param2, state2] = nextParam(state1);
+        return [
+          `${field} @@@ '[' || ${param1} || ' TO ' || ${param2} || ']'`,
+          addValue(addValue(state2, `${year}-${month}-01`), `${year}-${month}-${lastDay}`),
+        ];
+      }
+      
       // Use parameter binding for dates
       const [dateParam, dateState] = nextParam(state);
       return [
@@ -214,11 +237,36 @@ const rangeToSql = (
     ];
   } else {
     const [paramName, newState] = nextParam(state);
+    let val = value;
+    
+    // Handle date shorthand formats in comparison operators
+    if (isDateField) {
+      // Year format (YYYY)
+      if (/^\d{4}$/.test(value)) {
+        if (operator === ">" || operator === ">=") {
+          val = `${value}-01-01`;
+        } else if (operator === "<" || operator === "<=") {
+          val = `${value}-12-31`;
+        }
+      }
+      // Month format (YYYY-MM)
+      else if (/^\d{4}-\d{2}$/.test(value)) {
+        const [year, month] = value.split('-');
+        if (operator === ">" || operator === ">=") {
+          val = `${year}-${month}-01`;
+        } else if (operator === "<" || operator === "<=") {
+          const lastDay = new Date(Number(year), Number(month), 0).getDate();
+          val = `${year}-${month}-${lastDay}`;
+        }
+      }
+    } else {
+      val = value; // Keep as string, will be converted to number later
+    }
+    
     const rangeOp = operator.replace(">=", ">=").replace("<=", "<=");
-    const val = isDateField ? value : Number(value);
     return [
       `${field} @@@ '${rangeOp}' || ${paramName}`,
-      addValue(newState, val),
+      addValue(newState, isDateField ? val : Number(val)),
     ];
   }
 };

@@ -432,6 +432,44 @@ describe("Search Query Parser", () => {
         "date:2023-12-31..2024-01-01"
       );
     });
+
+    test("parses date shorthand formats", () => {
+      // Year shorthand
+      testSchemaQuery(
+        "date:2024",
+        "date:2024"
+      );
+      
+      // Month shorthand
+      testSchemaQuery(
+        "date:2024-02",
+        "date:2024-02"
+      );
+      
+      // Shorthand with comparison operators
+      testSchemaQuery(
+        "date:>=2024",
+        "date:>=2024"
+      );
+      
+      testSchemaQuery(
+        "date:<2024-03",
+        "date:<2024-03"
+      );
+      
+      // Multiple date shorthands in one query
+      testSchemaQuery(
+        "date:>=2024 AND date:<2025",
+        "(date:>=2024 AND date:<2025)"
+      );
+      
+      // Mix of shorthand and full date formats
+      testSchemaQuery(
+        "date:2024 OR date:2024-01-15",
+        "(date:2024 OR date:2024-01-15)"
+      );
+    });
+
     describe("Wildcard Pattern Support", () => {
       test("parses simple wildcard patterns", () => {
         testValidQuery("test*", "test*");
@@ -764,13 +802,54 @@ describe("Search Query Parser", () => {
           length: 11,
         },
       ]);
-
       testSchemaErrorQuery("date:2024-13-01..2024-12-31", [
         {
           message: "Invalid date format",
           code: SearchQueryErrorCode.VALUE_DATE_FORMAT_INVALID,
           position: 5,
           length: 22,
+        },
+      ]);
+    });
+
+    test("validates date shorthand formats", () => {
+      // Invalid year format
+      testSchemaErrorQuery("date:202", [
+        {
+          message: "Invalid date format",
+          code: SearchQueryErrorCode.VALUE_DATE_FORMAT_INVALID,
+          position: 5,
+          length: 3,
+        },
+      ]);
+      
+      // Invalid month format
+      testSchemaErrorQuery("date:2024-13", [
+        {
+          message: "Invalid date format",
+          code: SearchQueryErrorCode.VALUE_DATE_FORMAT_INVALID,
+          position: 5,
+          length: 7,
+        },
+      ]);
+      
+      // Invalid month value
+      testSchemaErrorQuery("date:2024-00", [
+        {
+          message: "Invalid date format",
+          code: SearchQueryErrorCode.VALUE_DATE_FORMAT_INVALID,
+          position: 5,
+          length: 7,
+        },
+      ]);
+      
+      // Invalid comparison with shorthand
+      testSchemaErrorQuery("date:>invalid-year", [
+        {
+          message: "Invalid date format",
+          code: SearchQueryErrorCode.VALUE_DATE_FORMAT_INVALID,
+          position: 5,
+          length: 13,
         },
       ]);
     });

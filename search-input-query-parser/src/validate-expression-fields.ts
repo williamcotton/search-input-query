@@ -254,6 +254,20 @@ const validateFieldValue = (
       if (schema.type === "date") {
         const dateValidator = (dateStr: string) => {
           if (!dateStr) return true;
+          
+          // Check for year format (YYYY)
+          if (/^\d{4}$/.test(dateStr)) {
+            return true;
+          }
+          
+          // Check for year-month format (YYYY-MM)
+          if (/^\d{4}-\d{2}$/.test(dateStr)) {
+            const [year, month] = dateStr.split('-').map(Number);
+            // Validate month is between 1-12
+            return month >= 1 && month <= 12;
+          }
+          
+          // Check for full date format (YYYY-MM-DD)
           if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
             return false;
           }
@@ -264,6 +278,7 @@ const validateFieldValue = (
           );
         };
 
+        // Handle date range with shorthand formats
         if (value.includes("..")) {
           const [start, end] = value.split("..");
           if (!dateValidator(start) || !dateValidator(end)) {

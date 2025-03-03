@@ -271,6 +271,8 @@ const result = await prisma.$queryRaw`${Prisma.raw(base)} WHERE ${Prisma.raw(tex
 | Open Range Down | `field:..number` | `price:..20` | Values less than or equal |
 | **Date Ranges** |
 | Date Equals | `field:YYYY-MM-DD` | `date:2024-01-01` | Exact date match |
+| Year Shorthand | `field:YYYY` | `date:2024` | All dates in the year (expands to YYYY-01-01..YYYY-12-31) |
+| Month Shorthand | `field:YYYY-MM` | `date:2024-01` | All dates in the month (expands to YYYY-MM-01..YYYY-MM-[last day]) |
 | Date Range | `field:YYYY-MM-DD..YYYY-MM-DD` | `date:2024-01-01..2024-12-31` | Dates in inclusive range |
 | Date Compare | `field:>YYYY-MM-DD` | `date:>2024-01-01` | Dates after specified date |
 | **Logical Operators** |

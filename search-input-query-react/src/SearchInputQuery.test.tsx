@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 // import userEvent from "@testing-library/user-event";
 import SearchInputQuery from "./SearchInputQuery";
 import { FieldSchema } from "search-input-query-parser";
@@ -49,6 +49,7 @@ interface MockEditorInstance {
     keybindings?: number[];
   }) => void;
   getModel: () => MockEditorModel;
+  createDecorationsCollection: (decorations: MockDecoration[]) => void;
 }
 
 interface MockEditorProps {
@@ -84,37 +85,95 @@ const mockMonaco = {
     Enter: 13,
     KeyF: 33
   },
-  Range: jest.fn(),
+  Range: jest.fn().mockImplementation((startLine, startCol, endLine, endCol) => {
+    return { startLine, startCol, endLine, endCol };
+  }),
 };
+
+// Track editor action registrations
+const mockAddAction = jest.fn();
+
+// Track decorations
+const mockDeltaDecorations = jest.fn().mockReturnValue(["decoration-id-1"]);
+const mockGetAllDecorations = jest.fn().mockReturnValue([]);
+const mockCreateDecorationsCollection = jest.fn();
 
 // Mock Monaco Editor
 jest.mock("@monaco-editor/react", () => {
-  return function MockEditor({ onChange, onMount }: MockEditorProps) {
+  return function MockEditor({ onChange, onMount, defaultValue }: MockEditorProps & { defaultValue?: string }) {
     React.useEffect(() => {
       if (onMount) {
+        // Create a variable to store current value
+        let currentValue = defaultValue || "";
+        
         const mockEditor: MockEditorInstance = {
-          getValue: () => "",
-          setValue: () => {},
-          focus: () => {},
-          addAction: () => {},
+          getValue: () => currentValue,
+          setValue: (value) => {
+            currentValue = value;
+            // Important: Trigger onChange when setValue is called
+            if (onChange) {
+              onChange(value);
+            }
+          },
+          focus: jest.fn(),
+          addAction: mockAddAction,
           getModel: () => ({
-            getAllDecorations: () => [],
-            deltaDecorations: () => [],
+            getAllDecorations: mockGetAllDecorations,
+            deltaDecorations: mockDeltaDecorations,
           }),
+          createDecorationsCollection: mockCreateDecorationsCollection,
         };
+        
         onMount(mockEditor, mockMonaco);
+        
+        // Trigger initial search with default value
+        if (defaultValue && onChange) {
+          onChange(defaultValue);
+        }
       }
-    }, [onMount]);
+    }, [onMount, onChange, defaultValue]);
 
     return (
       <div data-testid="mock-editor">
         <input
           type="text"
+          defaultValue={defaultValue}
           onChange={(e) => onChange?.(e.target.value)}
           data-testid="editor-input"
         />
       </div>
     );
+  };
+});
+
+// Mock search-input-query-parser module
+jest.mock("search-input-query-parser", () => {
+  return {
+    parseSearchInputQuery: jest.fn().mockImplementation((query, schemas) => {
+      // Mock error case for specific queries
+      if (query.includes("error")) {
+        return {
+          type: "SEARCH_QUERY_ERROR",
+          errors: [
+            {
+              message: "Mock parsing error",
+              position: 0,
+              length: 5,
+              code: 0,
+            },
+          ],
+        };
+      }
+      
+      // Mock valid case
+      return {
+        type: "SEARCH_QUERY_SUCCESS",
+        expression: { type: "value", value: query },
+      };
+    }),
+    stringify: jest.fn().mockImplementation((expr) => {
+      return `Stringified: ${JSON.stringify(expr)}`;
+    }),
   };
 });
 
@@ -143,6 +202,14 @@ describe("SearchInputQuery", () => {
 
   beforeEach(() => {
     mockOnSearchResult.mockClear();
+    mockAddAction.mockClear();
+    mockDeltaDecorations.mockClear();
+    mockGetAllDecorations.mockClear();
+    mockCreateDecorationsCollection.mockClear();
+    
+    // Reset decoration mock behavior
+    mockGetAllDecorations.mockReturnValue([]);
+    
     // Clear Monaco mock calls
     Object.values(mockMonaco.languages).forEach((fn) => {
       if (jest.isMockFunction(fn)) {
@@ -150,6 +217,10 @@ describe("SearchInputQuery", () => {
       }
     });
     mockMonaco.editor.defineTheme.mockClear();
+    mockMonaco.editor.addKeybindingRule.mockClear();
+    
+    // Clear parser mocks
+    jest.clearAllMocks();
   });
 
   describe("Rendering", () => {
@@ -245,6 +316,266 @@ describe("SearchInputQuery", () => {
         expect(mockMonaco.editor.defineTheme).toHaveBeenCalledWith(
           "searchQueryTheme",
           mockEditorTheme
+        );
+      });
+    });
+  });
+
+  describe("Input and Search Functionality", () => {
+    it("handles input changes and triggers search", async () => {
+      render(
+        <SearchInputQuery
+          schemas={mockSchemas}
+          onSearchResult={mockOnSearchResult}
+          editorTheme={mockEditorTheme}
+        />
+      );
+
+      const editorInput = screen.getByTestId("editor-input");
+      fireEvent.change(editorInput, { target: { value: "test query" } });
+
+      await waitFor(() => {
+        expect(mockOnSearchResult).toHaveBeenCalledWith(expect.objectContaining({
+          expression: expect.any(Object),
+          parsedResult: expect.stringContaining("Stringified:"),
+          errors: [],
+          query: "test query",
+        }));
+      });
+    });
+
+    it("handles empty queries", async () => {
+      render(
+        <SearchInputQuery
+          schemas={mockSchemas}
+          onSearchResult={mockOnSearchResult}
+          editorTheme={mockEditorTheme}
+        />
+      );
+
+      const editorInput = screen.getByTestId("editor-input");
+      // First enter some text
+      fireEvent.change(editorInput, { target: { value: "some query" } });
+      // Then clear it
+      fireEvent.change(editorInput, { target: { value: "" } });
+
+      await waitFor(() => {
+        expect(mockOnSearchResult).toHaveBeenLastCalledWith({
+          expression: null,
+          parsedResult: "",
+          errors: [],
+          query: "",
+        });
+      });
+    });
+
+    it("handles query parsing errors", async () => {
+      render(
+        <SearchInputQuery
+          schemas={mockSchemas}
+          onSearchResult={mockOnSearchResult}
+          editorTheme={mockEditorTheme}
+        />
+      );
+
+      const editorInput = screen.getByTestId("editor-input");
+      fireEvent.change(editorInput, { target: { value: "error in query" } });
+
+      await waitFor(() => {
+        expect(mockOnSearchResult).toHaveBeenCalledWith(expect.objectContaining({
+          expression: null,
+          parsedResult: "",
+          errors: expect.arrayContaining([
+            expect.objectContaining({
+              message: "Mock parsing error",
+            }),
+          ]),
+          query: "error in query",
+        }));
+      });
+    });
+  });
+
+  describe("Default Value Handling", () => {
+    it("initializes with default value when provided", async () => {
+      const defaultValue = "initial query";
+      
+      render(
+        <SearchInputQuery
+          schemas={mockSchemas}
+          onSearchResult={mockOnSearchResult}
+          editorTheme={mockEditorTheme}
+          defaultValue={defaultValue}
+        />
+      );
+
+      // Wait for editor to initialize and trigger search
+      await waitFor(() => {
+        expect(mockOnSearchResult).toHaveBeenCalledWith(expect.objectContaining({
+          query: defaultValue,
+        }));
+      });
+    });
+  });
+
+  describe("Error Handling", () => {
+    it("properly creates error decorations for parsing errors", async () => {
+      render(
+        <SearchInputQuery
+          schemas={mockSchemas}
+          onSearchResult={mockOnSearchResult}
+          editorTheme={mockEditorTheme}
+        />
+      );
+
+      const editorInput = screen.getByTestId("editor-input");
+      fireEvent.change(editorInput, { target: { value: "error in query" } });
+
+      await waitFor(() => {
+        expect(mockCreateDecorationsCollection).toHaveBeenCalledWith(
+          expect.arrayContaining([
+            expect.objectContaining({
+              options: expect.objectContaining({
+                inlineClassName: "search-input-error",
+                hoverMessage: expect.objectContaining({
+                  value: "Mock parsing error"
+                }),
+              })
+            })
+          ])
+        );
+      });
+    });
+
+    it("handles unexpected errors during parsing", async () => {
+      // Setup a one-time error in parseSearchInputQuery
+      const parseSearchInputQueryMock = require("search-input-query-parser").parseSearchInputQuery;
+      parseSearchInputQueryMock.mockImplementationOnce(() => {
+        throw new Error("Unexpected error during parsing");
+      });
+
+      render(
+        <SearchInputQuery
+          schemas={mockSchemas}
+          onSearchResult={mockOnSearchResult}
+          editorTheme={mockEditorTheme}
+        />
+      );
+
+      const editorInput = screen.getByTestId("editor-input");
+      fireEvent.change(editorInput, { target: { value: "query causing exception" } });
+
+      await waitFor(() => {
+        expect(mockOnSearchResult).toHaveBeenCalledWith(expect.objectContaining({
+          expression: null,
+          parsedResult: "",
+          errors: expect.arrayContaining([
+            expect.objectContaining({
+              message: "Unexpected error during parsing"
+            })
+          ]),
+          query: "query causing exception"
+        }));
+      });
+    });
+
+    it("clears existing error decorations before adding new ones", async () => {
+      // Setup existing decorations
+      mockGetAllDecorations.mockReturnValueOnce([
+        { 
+          id: "old-decoration-1", 
+          options: { inlineClassName: "search-input-error" } 
+        },
+        { 
+          id: "old-decoration-2", 
+          options: { inlineClassName: "search-input-error" } 
+        }
+      ]);
+
+      render(
+        <SearchInputQuery
+          schemas={mockSchemas}
+          onSearchResult={mockOnSearchResult}
+          editorTheme={mockEditorTheme}
+        />
+      );
+
+      const editorInput = screen.getByTestId("editor-input");
+      fireEvent.change(editorInput, { target: { value: "error in query" } });
+
+      await waitFor(() => {
+        // Should clear old decorations first
+        expect(mockDeltaDecorations).toHaveBeenCalledWith(
+          ["old-decoration-1", "old-decoration-2"],
+          []
+        );
+        // Then add new decorations
+        expect(mockCreateDecorationsCollection).toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe("Editor Actions", () => {
+    it("registers a search action with Enter key binding", async () => {
+      render(
+        <SearchInputQuery
+          schemas={mockSchemas}
+          onSearchResult={mockOnSearchResult}
+          editorTheme={mockEditorTheme}
+        />
+      );
+
+      await waitFor(() => {
+        // Verify that addAction was called with a search action
+        expect(mockAddAction).toHaveBeenCalledWith(
+          expect.objectContaining({
+            id: "submitSearch",
+            label: "Submit Search",
+            keybindings: [mockMonaco.KeyCode.Enter]
+          })
+        );
+      });
+    });
+
+    it("disables the browser's default Ctrl+F behavior", async () => {
+      render(
+        <SearchInputQuery
+          schemas={mockSchemas}
+          onSearchResult={mockOnSearchResult}
+          editorTheme={mockEditorTheme}
+        />
+      );
+
+      await waitFor(() => {
+        expect(mockMonaco.editor.addKeybindingRule).toHaveBeenCalledWith(
+          expect.objectContaining({
+            keybinding: mockMonaco.KeyMod.CtrlCmd | mockMonaco.KeyCode.KeyF,
+            command: null
+          })
+        );
+      });
+    });
+  });
+
+  describe("Schema Integration", () => {
+    it("passes schemas to parser", async () => {
+      const parseSearchInputQueryMock = require("search-input-query-parser").parseSearchInputQuery;
+      
+      render(
+        <SearchInputQuery
+          schemas={mockSchemas}
+          onSearchResult={mockOnSearchResult}
+          editorTheme={mockEditorTheme}
+        />
+      );
+
+      const editorInput = screen.getByTestId("editor-input");
+      fireEvent.change(editorInput, { target: { value: "test query" } });
+
+      await waitFor(() => {
+        expect(parseSearchInputQueryMock).toHaveBeenCalledWith(
+          "test query", 
+          mockSchemas
         );
       });
     });

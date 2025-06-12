@@ -4,6 +4,7 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import SearchInputQuery from "./SearchInputQuery";
 import { FieldSchema } from "search-input-query-parser";
 import type { EditorTheme } from "./SearchInputQuery";
+import { parseSearchInputQuery } from "search-input-query-parser";
 
 // Mock Monaco types and interfaces
 interface MockDecoration {
@@ -149,7 +150,7 @@ jest.mock("@monaco-editor/react", () => {
 // Mock search-input-query-parser module
 jest.mock("search-input-query-parser", () => {
   return {
-    parseSearchInputQuery: jest.fn().mockImplementation((query, schemas) => {
+    parseSearchInputQuery: jest.fn().mockImplementation((query) => {
       // Mock error case for specific queries
       if (query.includes("error")) {
         return {
@@ -449,8 +450,7 @@ describe("SearchInputQuery", () => {
 
     it("handles unexpected errors during parsing", async () => {
       // Setup a one-time error in parseSearchInputQuery
-      const parseSearchInputQueryMock = require("search-input-query-parser").parseSearchInputQuery;
-      parseSearchInputQueryMock.mockImplementationOnce(() => {
+      (parseSearchInputQuery as jest.Mock).mockImplementationOnce(() => {
         throw new Error("Unexpected error during parsing");
       });
 
@@ -559,7 +559,7 @@ describe("SearchInputQuery", () => {
 
   describe("Schema Integration", () => {
     it("passes schemas to parser", async () => {
-      const parseSearchInputQueryMock = require("search-input-query-parser").parseSearchInputQuery;
+      (parseSearchInputQuery as jest.Mock).mockClear();
       
       render(
         <SearchInputQuery
@@ -573,7 +573,7 @@ describe("SearchInputQuery", () => {
       fireEvent.change(editorInput, { target: { value: "test query" } });
 
       await waitFor(() => {
-        expect(parseSearchInputQueryMock).toHaveBeenCalledWith(
+        expect(parseSearchInputQuery).toHaveBeenCalledWith(
           "test query", 
           mockSchemas
         );

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import Editor, { OnMount } from "@monaco-editor/react";
 import { editor, languages, KeyCode, Range } from "monaco-editor";
 import {
@@ -34,6 +34,9 @@ export interface Monaco {
   Range: typeof Range;
 }
 
+// Global flag to prevent duplicate language registration
+let isLanguageRegistered = false;
+
 export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
   schemas,
   onSearchResult,
@@ -46,6 +49,42 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
   // const placeholderRef = useRef<PlaceholderContentWidget | null>(null);
   const [decorations, setDecorations] =
     useState<editor.IEditorDecorationsCollection | null>(null);
+  
+  // Store disposable references for cleanup
+  const completionProviderRef = useRef<languages.IDisposable | null>(null);
+
+  // Cleanup function
+  const cleanup = () => {
+    // Dispose of completion provider
+    if (completionProviderRef.current) {
+      completionProviderRef.current.dispose();
+      completionProviderRef.current = null;
+    }
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return cleanup;
+  }, []);
+
+  // Update completion provider when schemas change
+  useEffect(() => {
+    const monaco = monacoRef.current;
+    if (!monaco || !completionProviderRef.current) return;
+
+    console.log('🔄 Schemas changed, updating completion provider with', schemas.length, 'schemas');
+    
+    // Dispose of old completion provider
+    if (completionProviderRef.current) {
+      completionProviderRef.current.dispose();
+    }
+
+    // Register new completion provider with updated schemas
+    completionProviderRef.current = monaco.languages.registerCompletionItemProvider(
+      "searchQuery",
+      createCompletionItemProvider(monaco, schemas)
+    );
+  }, [schemas]);
 
   const clearAllErrorDecorations = () => {
     const editor = editorRef.current;
@@ -81,22 +120,32 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
 
     editor.setValue(defaultValue);
 
-    // Register custom language
-    registerSearchQueryLanguage(monaco, editorTheme);
+    // Register custom language only once globally
+    if (!isLanguageRegistered) {
+      registerSearchQueryLanguage(monaco, editorTheme);
+      
+      monaco.languages.setLanguageConfiguration("searchQuery", {
+        autoClosingPairs: [
+          { open: "(", close: ")" },
+          { open: '"', close: '"' },
+        ],
+        surroundingPairs: [
+          { open: "(", close: ")" },
+          { open: '"', close: '"' },
+        ],
+        brackets: [["(", ")"]],
+      });
+      
+      isLanguageRegistered = true;
+    }
 
-    monaco.languages.setLanguageConfiguration("searchQuery", {
-      autoClosingPairs: [
-        { open: "(", close: ")" },
-        { open: '"', close: '"' },
-      ],
-      surroundingPairs: [
-        { open: "(", close: ")" },
-        { open: '"', close: '"' },
-      ],
-      brackets: [["(", ")"]],
-    });
+    // Clean up any existing completion provider first
+    if (completionProviderRef.current) {
+      completionProviderRef.current.dispose();
+    }
 
-    monaco.languages.registerCompletionItemProvider(
+    // Register new completion provider and store disposable
+    completionProviderRef.current = monaco.languages.registerCompletionItemProvider(
       "searchQuery",
       createCompletionItemProvider(monaco, schemas)
     );

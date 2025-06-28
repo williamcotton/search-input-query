@@ -6,8 +6,8 @@ import {
   Expression,
   parseSearchInputQuery,
   stringify,
-} from "search-input-query-parser";
-import type { ValidationError } from "search-input-query-parser/validator";
+} from "../../search-input-query-parser/src/parser";
+import type { ValidationError } from "../../search-input-query-parser/src/validator";
 import { createCompletionItemProvider } from "./create-completion-item-provider";
 import { registerSearchQueryLanguage } from "./search-syntax";
 // import { PlaceholderContentWidget } from "./PlaceholderContentWidget";
@@ -23,6 +23,7 @@ interface SearchInputQueryProps {
   // placeholder?: string;
   editorTheme: editor.IStandaloneThemeData;
   defaultValue?: string;
+  autoSearch?: boolean; // New prop to control auto search behavior
 }
 
 export type EditorTheme = editor.IStandaloneThemeData;
@@ -43,6 +44,7 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
   // placeholder,
   editorTheme,
   defaultValue = "",
+  autoSearch = false, // Default to manual search
 }) => {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
@@ -53,12 +55,9 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
   // Store disposable references for cleanup
   const completionProviderRef = useRef<languages.IDisposable | null>(null);
 
-  // Cleanup function
   const cleanup = () => {
-    // Dispose of completion provider
     if (completionProviderRef.current) {
       completionProviderRef.current.dispose();
-      completionProviderRef.current = null;
     }
   };
 
@@ -69,10 +68,10 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
 
   // Update completion provider when schemas change
   useEffect(() => {
+    console.log('🔄 Schemas changed, updating completion provider with', schemas.length, 'schemas');
+    
     const monaco = monacoRef.current;
     if (!monaco || !completionProviderRef.current) return;
-
-    console.log('🔄 Schemas changed, updating completion provider with', schemas.length, 'schemas');
     
     // Dispose of old completion provider
     if (completionProviderRef.current) {
@@ -80,10 +79,12 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
     }
 
     // Register new completion provider with updated schemas
+    cleanup();
     completionProviderRef.current = monaco.languages.registerCompletionItemProvider(
       "searchQuery",
       createCompletionItemProvider(monaco, schemas)
     );
+    console.log('🔄 completionProviderRef.current:', completionProviderRef.current);
   }, [schemas]);
 
   const clearAllErrorDecorations = () => {
@@ -265,44 +266,75 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
   };
 
   const onChange = (value: string | undefined) => {
-    if (value !== undefined) {
+    if (value !== undefined && autoSearch) {
       handleSearch(value);
     }
   };
 
+  const handleManualSearch = () => {
+    const editor = editorRef.current;
+    if (editor) {
+      const currentValue = editor.getValue();
+      handleSearch(currentValue);
+    }
+  };
+
   return (
-    <div className="search-wrapper">
-      <Editor
-        height="2em"
-        defaultLanguage="searchQuery"
-        defaultValue={defaultValue}
-        theme="searchQueryTheme"
-        onMount={handleEditorDidMount}
-        onChange={onChange}
-        className="search-input"
-        options={{
-          wordWrap: "off",
-          lineNumbers: "off",
-          glyphMargin: false,
-          folding: false,
-          lineDecorationsWidth: 0,
-          lineNumbersMinChars: 0,
-          minimap: { enabled: false },
-          scrollbar: {
-            horizontal: "hidden",
-            vertical: "hidden",
-          },
-          overviewRulerLanes: 0,
-          hideCursorInOverviewRuler: true,
-          overviewRulerBorder: false,
-          renderLineHighlight: "none",
-          theme: "searchQueryTheme",
-          autoClosingBrackets: "always",
-          autoClosingQuotes: "always",
-          autoClosingOvertype: "always",
-          autoSurround: "languageDefined",
-        }}
-      />
+    <div className="search-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div style={{ flex: 1 }}>
+        <Editor
+          height="2em"
+          defaultLanguage="searchQuery"
+          defaultValue={defaultValue}
+          theme="searchQueryTheme"
+          onMount={handleEditorDidMount}
+          onChange={onChange}
+          className="search-input"
+          options={{
+            wordWrap: "off",
+            lineNumbers: "off",
+            glyphMargin: false,
+            folding: false,
+            lineDecorationsWidth: 0,
+            lineNumbersMinChars: 0,
+            minimap: { enabled: false },
+            scrollbar: {
+              horizontal: "hidden",
+              vertical: "hidden",
+            },
+            overviewRulerLanes: 0,
+            hideCursorInOverviewRuler: true,
+            overviewRulerBorder: false,
+            renderLineHighlight: "none",
+            theme: "searchQueryTheme",
+            autoClosingBrackets: "always",
+            autoClosingQuotes: "always",
+            autoClosingOvertype: "always",
+            autoSurround: "languageDefined",
+          }}
+        />
+      </div>
+      {!autoSearch && (
+        <button
+          onClick={handleManualSearch}
+          className="search-button"
+          style={{
+            backgroundColor: '#2563eb',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            padding: '6px 12px',
+            fontSize: '14px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px'
+          }}
+          title="Search (or press Enter)"
+        >
+          🔍
+        </button>
+      )}
     </div>
   );
 };

@@ -334,6 +334,14 @@ const expressionToSql = (
       const [sqlText, newState] = expressionToSql(expr.expression, state);
       return [`NOT ${sqlText}`, newState];
     }
+
+    case "ORDER_BY":
+      // OrderBy doesn't contribute to WHERE clause in ILIKE SQL
+      return ["1=1", state];
+
+    default:
+      const exhaustiveCheck: never = expr;
+      throw new Error(`Unhandled expression type: ${(exhaustiveCheck as any).type}`);
   }
 };
 

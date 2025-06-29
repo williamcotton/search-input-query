@@ -89,6 +89,75 @@ export const parseRangeExpression = (
         length: colonIndex + 1 + value.length,
       };
     }
+
+    // Handle general date ranges with mixed formats (YYYY, YYYY-MM, YYYY-MM-DD)
+    const generalRangeMatch = value.match(/^(.+)\.\.(.+)$/);
+    if (generalRangeMatch) {
+      const [_, startValue, endValue] = generalRangeMatch;
+      
+      // Helper function to expand incomplete dates
+      const expandDateValue = (dateStr: string, isEndOfRange: boolean): string => {
+        // Full date format YYYY-MM-DD
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+          return dateStr;
+        }
+        
+        // Year-month format YYYY-MM
+        if (/^\d{4}-\d{2}$/.test(dateStr)) {
+          if (isEndOfRange) {
+            // For end of range, use last day of month
+            const [year, month] = dateStr.split('-');
+            const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+            return `${dateStr}-${lastDay.toString().padStart(2, '0')}`;
+          } else {
+            // For start of range, use first day of month
+            return `${dateStr}-01`;
+          }
+        }
+        
+        // Year-only format YYYY
+        if (/^\d{4}$/.test(dateStr)) {
+          if (isEndOfRange) {
+            // For end of range, use last day of year
+            return `${dateStr}-12-31`;
+          } else {
+            // For start of range, use first day of year
+            return `${dateStr}-01-01`;
+          }
+        }
+        
+        // If format is not recognized, return as-is
+        return dateStr;
+      };
+      
+      const expandedStart = expandDateValue(startValue, false);
+      const expandedEnd = expandDateValue(endValue, true);
+      
+      return {
+        type: "RANGE",
+        field: {
+          type: "FIELD",
+          value: fieldName,
+          position,
+          length: colonIndex,
+        },
+        operator: "BETWEEN",
+        value: {
+          type: "VALUE",
+          value: expandedStart,
+          position: position + colonIndex + 1,
+          length: startValue.length,
+        },
+        value2: {
+          type: "VALUE",
+          value: expandedEnd,
+          position: position + colonIndex + startValue.length + 3,
+          length: endValue.length,
+        },
+        position,
+        length: colonIndex + 1 + value.length,
+      };
+    }
   }
 
   // Handle 10..20 (between), handling floats and negative numbers

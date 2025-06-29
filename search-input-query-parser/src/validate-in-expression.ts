@@ -6,9 +6,9 @@ export const validateInExpression = (
   errors: ValidationError[]
 ): void => {
   // Validate field name pattern
-  if (!/^[a-zA-Z][a-zA-Z0-9_-]*$/.test(expr.field)) {
+  if (!/^[a-zA-Z][a-zA-Z0-9_.\-]*$/.test(expr.field)) {
     errors.push({
-      message: "Invalid characters in field name",
+      message: "Invalid characters in field name 2",
       code: SearchQueryErrorCode.FIELD_CHARS_INVALID,
       position: expr.position,
       length: expr.field.length,

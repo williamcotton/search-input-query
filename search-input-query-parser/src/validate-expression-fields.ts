@@ -161,6 +161,11 @@ const validateFieldValue = (
       const fieldName = expr.value.substring(0, colonIndex).trim();
       const value = expr.value.substring(colonIndex + 1).trim();
 
+      // Skip validation for special reserved keywords like "orderby"
+      if (fieldName.toLowerCase() === "orderby") {
+        return; // orderby validation will be handled during transformation
+      }
+
       if (!allowedFields.has(fieldName.toLowerCase()) && colonIndex > 0) {
         errors.push({
           message: `Invalid field: "${fieldName}"`,

@@ -59,9 +59,9 @@ export const validateString = (
     }
 
     // Check for invalid characters in field names
-    if (!/^[a-zA-Z0-9_-]+$/.test(fieldName)) {
+    if (!/^[a-zA-Z0-9_.\-]+$/.test(fieldName)) {
       errors.push({
-        message: "Invalid characters in field name",
+        message: "Invalid characters in field name 1",
         code: SearchQueryErrorCode.FIELD_CHARS_INVALID,
         position: expr.position,
         length: fieldName.length,

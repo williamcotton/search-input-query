@@ -1,12 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import Editor, { OnMount } from "@monaco-editor/react";
 import { editor, languages, KeyCode, Range } from "monaco-editor";
-import {
-  FieldSchema,
-  Expression,
-  parseSearchInputQuery,
-  stringify,
-} from "../../search-input-query-parser/src/parser";
+import { FieldSchema, Expression, parseSearchInputQuery, stringify } from "../../search-input-query-parser/src/parser";
 import type { ValidationError } from "../../search-input-query-parser/src/validator";
 import { createCompletionItemProvider } from "./create-completion-item-provider";
 import { registerSearchQueryLanguage } from "./search-syntax";
@@ -14,12 +9,7 @@ import { registerSearchQueryLanguage } from "./search-syntax";
 
 interface SearchInputQueryProps {
   schemas: FieldSchema[];
-  onSearchResult: (result: {
-    expression: Expression | null;
-    parsedResult: string;
-    errors: ValidationError[];
-    query: string;
-  }) => void;
+  onSearchResult: (result: { expression: Expression | null; parsedResult: string; errors: ValidationError[]; query: string }) => void;
   // placeholder?: string;
   editorTheme: editor.IStandaloneThemeData;
   defaultValue?: string;
@@ -49,13 +39,15 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
   // const placeholderRef = useRef<PlaceholderContentWidget | null>(null);
-  const [decorations, setDecorations] =
-    useState<editor.IEditorDecorationsCollection | null>(null);
-  
+  const [decorations, setDecorations] = useState<editor.IEditorDecorationsCollection | null>(null);
+
   // Store disposable references for cleanup
-  const completionProviderRef = useRef<languages.IDisposable | null>(null);
+  const completionProviderRef = useRef<{ dispose(): void } | null>(null);
+  const schemasRef = useRef<FieldSchema[]>(schemas);
 
   const cleanup = () => {
+    // Dispose of old completion provider
+
     if (completionProviderRef.current) {
       completionProviderRef.current.dispose();
     }
@@ -67,25 +59,21 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
   }, []);
 
   // Update completion provider when schemas change
-  useEffect(() => {
-    console.log('🔄 Schemas changed, updating completion provider with', schemas.length, 'schemas');
-    
-    const monaco = monacoRef.current;
-    if (!monaco || !completionProviderRef.current) return;
-    
-    // Dispose of old completion provider
+  const updateCompletionProvider = () => {
+    // Register new completion provider with updated schemas
+    // Clean up any existing completion provider first
+    if (!monacoRef.current) {
+      console.log("🔄 monacoRef.current is null");
+      return;
+    }
     if (completionProviderRef.current) {
       completionProviderRef.current.dispose();
+      console.log("🔄 cleanup");
     }
 
-    // Register new completion provider with updated schemas
-    cleanup();
-    completionProviderRef.current = monaco.languages.registerCompletionItemProvider(
-      "searchQuery",
-      createCompletionItemProvider(monaco, schemas)
-    );
-    console.log('🔄 completionProviderRef.current:', completionProviderRef.current);
-  }, [schemas]);
+    completionProviderRef.current = monacoRef.current?.languages.registerCompletionItemProvider("searchQuery", createCompletionItemProvider(monacoRef.current, schemas)) || null;
+    console.log("🔄 updated schemas to:", schemasRef.current);
+  };
 
   const clearAllErrorDecorations = () => {
     const editor = editorRef.current;
@@ -110,6 +98,7 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
   };
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
+    console.log("🔄 handleEditorDidMount", editor, monaco);
     editorRef.current = editor;
     monacoRef.current = monaco;
 
@@ -124,7 +113,7 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
     // Register custom language only once globally
     if (!isLanguageRegistered) {
       registerSearchQueryLanguage(monaco, editorTheme);
-      
+
       monaco.languages.setLanguageConfiguration("searchQuery", {
         autoClosingPairs: [
           { open: "(", close: ")" },
@@ -136,20 +125,17 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
         ],
         brackets: [["(", ")"]],
       });
-      
+
       isLanguageRegistered = true;
     }
 
-    // Clean up any existing completion provider first
-    if (completionProviderRef.current) {
-      completionProviderRef.current.dispose();
-    }
+    // // Clean up any existing completion provider first
+    // if (completionProviderRef.current) {
+    //   completionProviderRef.current.dispose();
+    // }
 
-    // Register new completion provider and store disposable
-    completionProviderRef.current = monaco.languages.registerCompletionItemProvider(
-      "searchQuery",
-      createCompletionItemProvider(monaco, schemas)
-    );
+    // // Register new completion provider and store disposable
+    // completionProviderRef.current = monaco.languages.registerCompletionItemProvider("searchQuery", createCompletionItemProvider(monaco, schemas));
 
     editor.addAction({
       id: "submitSearch",
@@ -167,6 +153,7 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
     });
 
     editor.focus();
+    updateCompletionProvider();
   };
 
   const updateDecorations = (newErrors: ValidationError[]) => {
@@ -178,20 +165,14 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
 
     if (newErrors.length > 0) {
       const newDecorations = newErrors.map((error) => ({
-        range: new monaco.Range(
-          1,
-          error.position + 1,
-          1,
-          error.position + error.length + 1
-        ),
+        range: new monaco.Range(1, error.position + 1, 1, error.position + error.length + 1),
         options: {
           inlineClassName: "search-input-error",
           hoverMessage: { value: error.message },
         },
       }));
 
-      const decorationCollection =
-        editor.createDecorationsCollection(newDecorations);
+      const decorationCollection = editor.createDecorationsCollection(newDecorations);
       setDecorations(decorationCollection);
     }
   };
@@ -211,7 +192,7 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
     }
 
     try {
-      const result = parseSearchInputQuery(value, schemas);
+      const result = parseSearchInputQuery(value, schemasRef.current);
       if (result.type === "SEARCH_QUERY_ERROR") {
         onSearchResult({
           expression: null,
@@ -237,19 +218,11 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
 
       const isValidationError = (e: unknown): e is ValidationError => {
         const validationError = e as ValidationError;
-        return (
-          typeof validationError?.position === "number" &&
-          typeof validationError?.length === "number" &&
-          typeof validationError?.message === "string"
-        );
+        return typeof validationError?.position === "number" && typeof validationError?.length === "number" && typeof validationError?.message === "string";
       };
 
       const error: ValidationError = {
-        message: isValidationError(err)
-          ? err.message
-          : err instanceof Error
-          ? err.message
-          : "An error occurred while parsing the query",
+        message: isValidationError(err) ? err.message : err instanceof Error ? err.message : "An error occurred while parsing the query",
         code: 0,
         position: isValidationError(err) ? err.position : 0,
         length: isValidationError(err) ? err.length : value.length,
@@ -280,8 +253,8 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
   };
 
   return (
-    <div className="search-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-      <div style={{ flex: 1 }}>
+    <div className="search-wrapper flex items-center w-full min-w-0 gap-2">
+      <div className="flex-1 min-w-0">
         <Editor
           height="2em"
           defaultLanguage="searchQuery"
@@ -295,7 +268,7 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
             lineNumbers: "off",
             glyphMargin: false,
             folding: false,
-            lineDecorationsWidth: 0,
+            lineDecorationsWidth: 8, // 8px left padding (equivalent to px-2)
             lineNumbersMinChars: 0,
             minimap: { enabled: false },
             scrollbar: {
@@ -311,6 +284,20 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
             autoClosingQuotes: "always",
             autoClosingOvertype: "always",
             autoSurround: "languageDefined",
+            // Vertical centering and padding options
+            padding: { top: 4, bottom: 4 }, // Vertical padding for centering
+            revealHorizontalRightPadding: 8, // 8px right padding
+            fontFamily: "inherit",
+            fontSize: 14,
+            lineHeight: 20,
+            fixedOverflowWidgets: true,
+            automaticLayout: true, // Enable responsive layout
+            suggest: {
+              showIcons: true,
+              showSnippets: true,
+              showWords: true,
+              showStatusBar: false,
+            },
           }}
         />
       </div>
@@ -319,16 +306,16 @@ export const SearchInputQuery: React.FC<SearchInputQueryProps> = ({
           onClick={handleManualSearch}
           className="search-button"
           style={{
-            backgroundColor: '#2563eb',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            padding: '6px 12px',
-            fontSize: '14px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px'
+            backgroundColor: "#2563eb",
+            color: "white",
+            border: "none",
+            borderRadius: "4px",
+            padding: "6px 12px",
+            fontSize: "14px",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
           }}
           title="Search (or press Enter)"
         >

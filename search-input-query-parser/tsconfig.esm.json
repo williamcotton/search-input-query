@@ -4,5 +4,6 @@
     "module": "ESNext", 
     "outDir": "./dist/esm",
     "declaration": false,
+    "types": []
   }
 }

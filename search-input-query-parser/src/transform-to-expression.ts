@@ -1,6 +1,37 @@
 import { FirstPassExpression } from "./first-pass-parser";
 import { parseRangeExpression } from "./parse-range-expression";
-import { FieldSchema, Expression, Value } from "./parser";
+import { FieldSchema, Expression, Value, OrderByExpression, SortColumn } from "./parser";
+
+// Helper function to parse orderby expression
+const parseOrderByExpression = (
+  value: string,
+  position: number,
+  colonIndex: number
+): OrderByExpression => {
+  const columns: SortColumn[] = [];
+  
+  // Split by comma to get individual column specifications
+  const columnSpecs = value.split(',').map(spec => spec.trim());
+  
+  for (const spec of columnSpecs) {
+    if (!spec) continue;
+    
+    const parts = spec.split(/\s+/);
+    const column = parts[0];
+    const direction = parts[1]?.toLowerCase() === 'desc' ? 'desc' : 'asc';
+    
+    if (column) {
+      columns.push({ column, direction });
+    }
+  }
+  
+  return {
+    type: "ORDER_BY",
+    columns,
+    position,
+    length: colonIndex + 1 + value.length,
+  };
+};
 
 // Helper to transform FirstPassExpression into Expression
 export const transformToExpression = (
@@ -60,6 +91,11 @@ export const transformToExpression = (
           value.startsWith('"') && value.endsWith('"')
             ? value.slice(1, -1)
             : value;
+
+        // Handle special orderby field
+        if (field.toLowerCase() === "orderby") {
+          return parseOrderByExpression(value, expr.position, colonIndex);
+        }
 
         const schema = schemas.get(field.toLowerCase());
 

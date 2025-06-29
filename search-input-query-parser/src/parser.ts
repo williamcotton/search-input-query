@@ -82,6 +82,16 @@ export type InExpression = {
   readonly values: Value[];
 } & PositionLength;
 
+export type SortColumn = {
+  readonly column: string;
+  readonly direction: "asc" | "desc";
+};
+
+export type OrderByExpression = {
+  readonly type: "ORDER_BY";
+  readonly columns: SortColumn[];
+} & PositionLength;
+
 export type Expression =
   | SearchTerm
   | WildcardPattern
@@ -90,7 +100,8 @@ export type Expression =
   | And
   | Or
   | Not
-  | InExpression;
+  | InExpression
+  | OrderByExpression;
 
 export type SearchQuery = {
   readonly type: "SEARCH_QUERY";
@@ -127,7 +138,54 @@ export const stringify = (expr: Expression): string => {
       const values = expr.values.map((v: { value: string }) => v.value).join(",");
       return `${expr.field.value}:IN(${values})`;
     }
+    case "ORDER_BY": {
+      const columns = expr.columns.map(col => `${col.column} ${col.direction}`).join(", ");
+      return `orderby:${columns}`;
+    }
+    default:
+      // This should never happen if all Expression types are handled
+      const exhaustiveCheck: never = expr;
+      throw new Error(`Unhandled expression type: ${(exhaustiveCheck as any).type}`);
   }
+};
+
+// Validation function to ensure orderby is the last expression
+const validateOrderByPosition = (expr: Expression | null): ValidationError[] => {
+  const errors: ValidationError[] = [];
+  
+  if (!expr) return errors;
+  
+  // Check if there's an orderby anywhere that's not at the top level
+  const findOrderBy = (expression: Expression, inSubExpression: boolean = false): void => {
+    switch (expression.type) {
+      case "ORDER_BY":
+        if (inSubExpression) {
+          errors.push({
+            message: "orderby can only be used at the end of the query",
+            code: SearchQueryErrorCode.FIELD_NAME_INVALID,
+            position: expression.position,
+            length: expression.length,
+          });
+        }
+        break;
+      case "AND":
+        // In AND expressions, orderby can only be on the right side
+        findOrderBy(expression.left, true);
+        findOrderBy(expression.right, false);
+        break;
+      case "OR":
+        // orderby cannot be in OR expressions
+        findOrderBy(expression.left, true);
+        findOrderBy(expression.right, true);
+        break;
+      case "NOT":
+        findOrderBy(expression.expression, true);
+        break;
+    }
+  };
+  
+  findOrderBy(expr);
+  return errors;
 };
 
 // Main parse function
@@ -202,6 +260,16 @@ export const parseSearchInputQuery = (
       fieldSchemas.map((s) => [s.name.toLowerCase(), s])
     );
     const expression = transformToExpression(result.result, schemaMap);
+
+    // Validate orderby position
+    const orderByErrors = validateOrderByPosition(expression);
+    if (orderByErrors.length > 0) {
+      return {
+        type: "SEARCH_QUERY_ERROR",
+        expression: null,
+        errors: orderByErrors,
+      };
+    }
 
     return { type: "SEARCH_QUERY", expression };
   } catch (error: any) {

@@ -15,9 +15,16 @@ export function registerSearchQueryLanguage(
     // Set defaultToken to invalid to see what you do not tokenize yet
     defaultToken: "text",
 
+    // Keywords and operators
+    keywords: ["AND", "OR", "NOT", "IN", "orderby", "asc", "desc"],
+    operators: [":", ">=", "<=", ">", "<", "..", ","],
+
     // The main tokenizer for our languages
     tokenizer: {
       root: [
+        // Special handling for orderby expressions
+        [/\borderby\s*:/, { token: "keyword", next: "@orderby" }],
+
         // Logical operators (must come before field detection)
         [/\b(AND|OR|NOT|IN)\b/, "keyword"],
         [/(?<=:)\s*IN*/, "value"],
@@ -60,6 +67,27 @@ export function registerSearchQueryLanguage(
 
         // Comma for IN operator lists
         [/,/, "delimiter"],
+      ],
+
+      // State for handling orderby expressions
+      orderby: [
+        // Sort directions
+        [/\b(asc|desc)\b/, "keyword"],
+        
+        // Field names in orderby
+        [/[a-zA-Z][a-zA-Z0-9_-]*/, "field"],
+        
+        // Comma separators between columns
+        [/,/, "operator"],
+        
+        // Whitespace
+        [/\s+/, "white"],
+        
+        // Exit orderby state on AND/OR (return to root)
+        [/\b(AND|OR)\b/, { token: "keyword", next: "@pop" }],
+        
+        // End of line or other tokens should go back to root
+        [/(?=\S)/, { token: "", next: "@pop" }],
       ],
 
       string: [

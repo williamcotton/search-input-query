@@ -165,7 +165,76 @@ const tokenizeString = (input: string, position: number): [Token, number] => {
     // Skip colon
     pos++;
 
-    // Handle quoted values
+    // Special handling for orderby field - read everything until the next AND/OR or end of input
+    if (fieldPart.toLowerCase() === "orderby") {
+      let orderbyValue = "";
+      let bracketDepth = 0;
+      let inQuotes = false;
+      let escapeNext = false;
+      
+      while (pos < input.length) {
+        const char = input[pos];
+        
+        if (escapeNext) {
+          orderbyValue += char;
+          escapeNext = false;
+          pos++;
+          continue;
+        }
+        
+        if (char === '\\') {
+          orderbyValue += char;
+          escapeNext = true;
+          pos++;
+          continue;
+        }
+        
+        if (char === '"' && !escapeNext) {
+          inQuotes = !inQuotes;
+          orderbyValue += char;
+          pos++;
+          continue;
+        }
+        
+        if (!inQuotes) {
+          if (char === '(') {
+            bracketDepth++;
+          } else if (char === ')') {
+            bracketDepth--;
+          }
+          
+          // Check if we're at a top-level AND/OR that would end the orderby
+          if (bracketDepth === 0 && isWhitespace(char)) {
+            // Look ahead to see if this is followed by AND/OR
+            let lookAhead = pos + 1;
+            while (lookAhead < input.length && isWhitespace(input[lookAhead])) {
+              lookAhead++;
+            }
+            
+            const remainingText = input.slice(lookAhead).toUpperCase();
+            if (remainingText.startsWith('AND ') || remainingText.startsWith('OR ')) {
+              // This whitespace is before an AND/OR, so end the orderby value here
+              break;
+            }
+          }
+        }
+        
+        orderbyValue += char;
+        pos++;
+      }
+      
+      return [
+        {
+          type: TokenType.STRING,
+          value: `${fieldPart}:${orderbyValue.trim()}`,
+          position: position,
+          length: pos - position,
+        },
+        pos,
+      ];
+    }
+
+    // Handle quoted values for non-orderby fields
     if (pos < input.length && input[pos] === '"') {
       const [quotedToken, newPos] = tokenizeQuotedString(input, pos);
       return [
@@ -179,7 +248,7 @@ const tokenizeString = (input: string, position: number): [Token, number] => {
       ];
     }
 
-    // Handle unquoted values
+    // Handle unquoted values for non-orderby fields
     const valuePart = readUntil(
       input,
       pos,

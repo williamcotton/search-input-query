@@ -16,7 +16,7 @@ export function createCompletionItemProvider(
   schemas: FieldSchema[]
 ): languages.CompletionItemProvider {
   return {
-    triggerCharacters: [":", " "],
+    triggerCharacters: [":", " ", ","],
     provideCompletionItems: (
       model: editor.ITextModel,
       position: Position
@@ -39,6 +39,10 @@ export function createCompletionItemProvider(
       // Get the current line's text
       const currentLineText = model.getLineContent(position.lineNumber);
 
+      // Check if we're in an orderby context
+      const orderbyMatch = textUntilPosition.match(/\borderby\s*:\s*([^:]*?)$/i);
+      const isInOrderByContext = !!orderbyMatch;
+
       const lastWord = currentLineText.split(/[\s]+/).pop();
       const isAfterColon = lastWord?.includes(":");
 
@@ -48,13 +52,57 @@ export function createCompletionItemProvider(
         .trimStart()
         .startsWith(":");
 
-      const words = textUntilPosition.split(/[\s:]+/);
+      const words = textUntilPosition.split(/[\s:,]+/);
       const currentWord = words[words.length - 1].toLowerCase();
       const previousWord = words[words.length - 2]?.toLowerCase();
 
       let suggestions: CompletionItem[] = [];
 
-      // Suggest fields when not after a colon
+      // Special handling for orderby context
+      if (isInOrderByContext) {
+        const orderbyContent = orderbyMatch[1];
+        
+        // Check if we're after a field name and should suggest asc/desc
+        const lastToken = orderbyContent.trim().split(/[\s,]+/).pop();
+        const isAfterFieldInOrderBy = lastToken && 
+          schemas.some(schema => schema.name.toLowerCase() === lastToken.toLowerCase()) &&
+          !/(asc|desc)$/i.test(orderbyContent);
+
+        if (isAfterFieldInOrderBy) {
+          // Suggest asc/desc after field names
+          suggestions = ["asc", "desc"]
+            .filter((dir) => dir.toLowerCase().includes(currentWord))
+            .map((dir) => ({
+              label: dir,
+              kind: monaco.languages.CompletionItemKind.Keyword,
+              insertText: dir,
+              documentation: {
+                value: `Sort direction: ${dir}ending order`,
+              },
+              range,
+            }));
+        } else {
+          // Suggest field names in orderby context
+          const fieldSuggestions: CompletionItem[] = schemas
+            .filter((schema) => schema.name.toLowerCase().includes(currentWord))
+            .map((schema) => ({
+              label: schema.name,
+              kind: monaco.languages.CompletionItemKind.Field,
+              insertText: schema.name,
+              detail: `Column (${schema.type})`,
+              documentation: {
+                value: `Sort by ${schema.name}\nType: ${schema.type}`,
+              },
+              range,
+            }));
+
+          suggestions = fieldSuggestions;
+        }
+        
+        return { suggestions };
+      }
+
+      // Regular field suggestions when not after a colon
       if (!isAfterColon) {
         // Filter schemas based on current input
         const fieldSuggestions: CompletionItem[] = schemas
@@ -83,10 +131,26 @@ export function createCompletionItemProvider(
             range,
           }));
 
-        suggestions = [...fieldSuggestions, ...operators];
+        // Add orderby as a special operator
+        const orderByOperator: CompletionItem[] = currentWord === "" || "orderby".includes(currentWord)
+          ? [
+              {
+                label: "orderby",
+                kind: monaco.languages.CompletionItemKind.Keyword,
+                insertText: "orderby:",
+                detail: "Sort results",
+                documentation: {
+                  value: "Sort results by one or more columns\nUsage: orderby:column1 asc, column2 desc",
+                },
+                range,
+              },
+            ]
+          : [];
+
+        suggestions = [...fieldSuggestions, ...operators, ...orderByOperator];
       }
       // Suggest values after a colon based on field type
-      else if (previousWord) {
+      else if (previousWord && previousWord !== "orderby") {
         // TODO: fix issue with completion items not disappearing after typing
         const schema = schemas.find(
           (s) => s.name.toLowerCase() === previousWord.toLowerCase()

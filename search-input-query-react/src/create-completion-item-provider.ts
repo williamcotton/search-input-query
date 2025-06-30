@@ -68,13 +68,6 @@ export function createCompletionItemProvider(
         const insideParens = inExpressionMatch[2]; // Everything inside parentheses
         const values = insideParens.split(',');
         currentWordInIN = values[values.length - 1].trim().toLowerCase(); // Get the last value being typed
-        console.log('🔍 IN expression detected:', {
-          textUntilPosition,
-          fieldName: inExpressionMatch[1],
-          insideParens,
-          values,
-          currentWordInIN
-        });
       }
 
       let suggestions: CompletionItem[] = [];
@@ -178,13 +171,6 @@ export function createCompletionItemProvider(
         );
         
         if (schema && schema.values && schema.values.length > 0) {
-          console.log('🔍 Schema found for IN expression:', {
-            fieldName,
-            schemaValues: schema.values,
-            currentWordInIN,
-            filteredValues: schema.values.filter((value) => value.toLowerCase().includes(currentWordInIN))
-          });
-          
           // Suggest predefined values for IN expression, using the properly extracted word
           const valueSuggestions: CompletionItem[] = schema.values
             .filter((value) => value.toLowerCase().includes(currentWordInIN))
@@ -200,7 +186,6 @@ export function createCompletionItemProvider(
             }));
 
           suggestions = valueSuggestions;
-          console.log('🔍 Generated suggestions:', suggestions.length);
         }
       }
       // Suggest values after a colon based on field type

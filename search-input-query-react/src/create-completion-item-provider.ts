@@ -1,8 +1,13 @@
 import type { editor, languages, Position, IRange } from "monaco-editor";
 
-import { FieldSchema } from "search-input-query-parser";
+import { FieldSchema as BaseFieldSchema } from "search-input-query-parser";
 
 import { Monaco } from "./SearchInputQuery";
+
+// Extended FieldSchema interface to support value autocompletion
+interface FieldSchema extends BaseFieldSchema {
+  values?: string[]; // Optional array of predefined values for autocompletion
+}
 
 interface CompletionItem extends languages.CompletionItem {
   insertText: string;
@@ -16,7 +21,7 @@ export function createCompletionItemProvider(
   schemas: FieldSchema[]
 ): languages.CompletionItemProvider {
   return {
-    triggerCharacters: [":", " ", ","],
+    triggerCharacters: [":", " ", ",", "("],
     provideCompletionItems: (
       model: editor.ITextModel,
       position: Position
@@ -55,6 +60,22 @@ export function createCompletionItemProvider(
       const words = textUntilPosition.split(/[\s:,]+/);
       const currentWord = words[words.length - 1].toLowerCase();
       const previousWord = words[words.length - 2]?.toLowerCase();
+
+      // Check if we're inside an IN expression and extract the current value properly
+      const inExpressionMatch = textUntilPosition.match(/(\w+)\s*:\s*IN\s*\(([^)]*)$/i);
+      let currentWordInIN = "";
+      if (inExpressionMatch) {
+        const insideParens = inExpressionMatch[2]; // Everything inside parentheses
+        const values = insideParens.split(',');
+        currentWordInIN = values[values.length - 1].trim().toLowerCase(); // Get the last value being typed
+        console.log('🔍 IN expression detected:', {
+          textUntilPosition,
+          fieldName: inExpressionMatch[1],
+          insideParens,
+          values,
+          currentWordInIN
+        });
+      }
 
       let suggestions: CompletionItem[] = [];
 
@@ -149,6 +170,39 @@ export function createCompletionItemProvider(
 
         suggestions = [...fieldSuggestions, ...operators, ...orderByOperator];
       }
+      // Check if we're inside an IN expression (inside parentheses)
+      else if (inExpressionMatch) {
+        const fieldName = inExpressionMatch[1];
+        const schema = schemas.find(
+          (s) => s.name.toLowerCase() === fieldName.toLowerCase()
+        );
+        
+        if (schema && schema.values && schema.values.length > 0) {
+          console.log('🔍 Schema found for IN expression:', {
+            fieldName,
+            schemaValues: schema.values,
+            currentWordInIN,
+            filteredValues: schema.values.filter((value) => value.toLowerCase().includes(currentWordInIN))
+          });
+          
+          // Suggest predefined values for IN expression, using the properly extracted word
+          const valueSuggestions: CompletionItem[] = schema.values
+            .filter((value) => value.toLowerCase().includes(currentWordInIN))
+            .map((value) => ({
+              label: value,
+              kind: monaco.languages.CompletionItemKind.Value,
+              insertText: value,
+              detail: `${schema.name} option`,
+              documentation: {
+                value: `Add ${value} to IN expression for ${schema.name}`,
+              },
+              range,
+            }));
+
+          suggestions = valueSuggestions;
+          console.log('🔍 Generated suggestions:', suggestions.length);
+        }
+      }
       // Suggest values after a colon based on field type
       else if (previousWord && previousWord !== "orderby") {
         // TODO: fix issue with completion items not disappearing after typing
@@ -156,65 +210,25 @@ export function createCompletionItemProvider(
           (s) => s.name.toLowerCase() === previousWord.toLowerCase()
         );
         if (schema) {
-          switch (schema.type) {
-            case "boolean":
-              suggestions = ["true", "false"].map((value) => ({
+          // Check if schema has predefined values
+          if (schema.values && schema.values.length > 0) {
+            // Suggest predefined values with filtering based on current input
+            const valueSuggestions: CompletionItem[] = schema.values
+              .filter((value) => value.toLowerCase().includes(currentWord))
+              .map((value) => ({
                 label: value,
                 kind: monaco.languages.CompletionItemKind.Value,
                 insertText: value,
+                detail: `${schema.name} option`,
+                documentation: {
+                  value: `Predefined value for ${schema.name}: ${value}`,
+                },
                 range,
               }));
-              break;
 
-            case "string":
-              suggestions = [
-                {
-                  label: "IN",
-                  kind: monaco.languages.CompletionItemKind.Operator,
-                  insertText: "IN",
-                  documentation: {
-                    value: "IN operator for multiple values (e.g., IN(value1,value2))",
-                  },
-                  range,
-                },
-              ];
-              break;
-
-            case "number":
-              suggestions = [
-                {
-                  label: ">",
-                  kind: monaco.languages.CompletionItemKind.Operator,
-                  insertText: ">",
-                  range,
-                },
-                {
-                  label: ">=",
-                  kind: monaco.languages.CompletionItemKind.Operator,
-                  insertText: ">=",
-                  range,
-                },
-                {
-                  label: "<",
-                  kind: monaco.languages.CompletionItemKind.Operator,
-                  insertText: "<",
-                  range,
-                },
-                {
-                  label: "<=",
-                  kind: monaco.languages.CompletionItemKind.Operator,
-                  insertText: "<=",
-                  range,
-                },
-                {
-                  label: "..",
-                  kind: monaco.languages.CompletionItemKind.Operator,
-                  insertText: "..",
-                  documentation: {
-                    value: "Range operator (e.g. 10..20)",
-                  },
-                  range,
-                },
+            // Also add IN operator for multi-value selection
+            const inOperator: CompletionItem[] = 
+              (currentWord === "" || "IN".toLowerCase().includes(currentWord)) ? [
                 {
                   label: "IN",
                   kind: monaco.languages.CompletionItemKind.Operator,
@@ -224,22 +238,96 @@ export function createCompletionItemProvider(
                   },
                   range,
                 }
-              ];
-              break;
+              ] : [];
 
-            case "date":
-              suggestions = [
-                {
-                  label: "YYYY-MM-DD",
+            suggestions = [...valueSuggestions, ...inOperator];
+          } else {
+            // Fallback to original type-based suggestions
+            switch (schema.type) {
+              case "boolean":
+                suggestions = ["true", "false"].map((value) => ({
+                  label: value,
                   kind: monaco.languages.CompletionItemKind.Value,
-                  insertText: new Date().toISOString().split("T")[0],
-                  documentation: {
-                    value: "Date in YYYY-MM-DD format",
-                  },
+                  insertText: value,
                   range,
-                },
-              ];
-              break;
+                }));
+                break;
+
+              case "string":
+                suggestions = [
+                  {
+                    label: "IN",
+                    kind: monaco.languages.CompletionItemKind.Operator,
+                    insertText: "IN",
+                    documentation: {
+                      value: "IN operator for multiple values (e.g., IN(value1,value2))",
+                    },
+                    range,
+                  },
+                ];
+                break;
+
+              case "number":
+                suggestions = [
+                  {
+                    label: ">",
+                    kind: monaco.languages.CompletionItemKind.Operator,
+                    insertText: ">",
+                    range,
+                  },
+                  {
+                    label: ">=",
+                    kind: monaco.languages.CompletionItemKind.Operator,
+                    insertText: ">=",
+                    range,
+                  },
+                  {
+                    label: "<",
+                    kind: monaco.languages.CompletionItemKind.Operator,
+                    insertText: "<",
+                    range,
+                  },
+                  {
+                    label: "<=",
+                    kind: monaco.languages.CompletionItemKind.Operator,
+                    insertText: "<=",
+                    range,
+                  },
+                  {
+                    label: "..",
+                    kind: monaco.languages.CompletionItemKind.Operator,
+                    insertText: "..",
+                    documentation: {
+                      value: "Range operator (e.g. 10..20)",
+                    },
+                    range,
+                  },
+                  {
+                    label: "IN",
+                    kind: monaco.languages.CompletionItemKind.Operator,
+                    insertText: "IN",
+                    documentation: {
+                      value: "IN operator for multiple values (e.g., IN(value1,value2))",
+                    },
+                    range,
+                  }
+                ];
+                break;
+
+              case "date":
+                suggestions = [
+                  {
+                    label: "YYYY-MM-DD",
+                    kind: monaco.languages.CompletionItemKind.Value,
+                    insertText: new Date().toISOString().split("T")[0],
+                    documentation: {
+                      value: "Date in YYYY-MM-DD format",
+                    },
+                    range,
+                  },
+                ];
+                break;
+            }
           }
         }
       }

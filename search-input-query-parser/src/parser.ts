@@ -19,6 +19,7 @@ export { ValidationError, SearchQueryErrorCode };
 export interface FieldSchema {
   name: string;
   type: "string" | "number" | "date" | "boolean";
+  values?: string[]; // Optional array of predefined values for autocompletion
 }
 
 // Second Pass AST types (semantic analysis)

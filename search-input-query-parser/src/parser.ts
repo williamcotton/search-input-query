@@ -13,7 +13,7 @@ import { validateExpressionFields } from "./validate-expression-fields";
 import { transformToExpression } from "./transform-to-expression";
 
 // Re-export these types from validator for backward compatibility
-export { ValidationError, SearchQueryErrorCode };
+//export { ValidationError, SearchQueryErrorCode };
 
 // Schema types for range queries
 export interface FieldSchema {

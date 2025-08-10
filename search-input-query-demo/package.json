@@ -1,7 +1,7 @@
 {
   "name": "search-input-query-demo",
   "private": true,
-  "version": "0.7.6",
+  "version": "0.7.7",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,8 +13,8 @@
     "@monaco-editor/react": "^4.7.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "search-input-query-parser": "^0.7.6",
-    "search-input-query-react": "^0.7.6",
+    "search-input-query-parser": "^0.7.7",
+    "search-input-query-react": "^0.7.7",
     "sql.js": "^1.13.0"
   },
   "devDependencies": {

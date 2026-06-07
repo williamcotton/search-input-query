@@ -12,7 +12,8 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "moduleDetection": "force",
-    "allowJs": true
+    "allowJs": true,
+    "rootDir": "./src"
   },
   "include": [
     "./src/**/*.ts",

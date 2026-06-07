@@ -1,6 +1,7 @@
 // db-service.ts
 import type { Database, SqlJsStatic } from "sql.js";
 import initSqlJs from "sql.js";
+import sqlWasmUrl from "sql.js/dist/sql-wasm-browser.wasm?url";
 
 export interface Product {
   id: number;
@@ -102,7 +103,7 @@ export async function initialize(): Promise<void> {
 
   state.initializationPromise = (async () => {
     const SQL: SqlJsStatic = await initSqlJs({
-      locateFile: (file: string) => `https://sql.js.org/dist/${file}`,
+      locateFile: () => sqlWasmUrl,
     });
 
     state.db = new SQL.Database();
@@ -182,9 +183,9 @@ export async function executeQuery(
     });
   } catch (error) {
     if (error instanceof Error) {
-      throw new Error(`Database query error: ${error.message}`);
+      throw new Error(`Database query error: ${error.message}`, { cause: error });
     }
-    throw new Error("Unknown database error occurred");
+    throw new Error("Unknown database error occurred", { cause: error });
   }
 }
 

@@ -13,6 +13,7 @@ export enum TokenType {
   IN = "IN",
   COMMA = "COMMA",
   NUMBER = "NUMBER",
+  COLON = "COLON",
 }
 
 export interface Token {
@@ -152,96 +153,60 @@ const tokenizeString = (input: string, position: number): [Token, number] => {
     }
   }
 
-  // Read until we hit a special character, whitespace, or colon
-  const fieldPart = readUntil(
+  // Read until we hit a special character or whitespace
+  // `:` is in isSpecialChar, so readUntil already stops at colons
+  const word = readUntil(
     input,
     pos,
-    (char) => !isWhitespace(char) && char !== ":" && !isSpecialChar(char)
+    (char) => !isWhitespace(char) && !isSpecialChar(char)
   );
-  pos += fieldPart.length;
+  pos += word.length;
 
-  // Check if this is a field:value pattern
+  // If next char is `:`, skip keyword detection — return as STRING
+  // so that `AND:value` → STRING("AND"), COLON, STRING("value")
   if (pos < input.length && input[pos] === ":") {
-    // Skip colon
-    pos++;
-
-    // Handle quoted values
-    if (pos < input.length && input[pos] === '"') {
-      const [quotedToken, newPos] = tokenizeQuotedString(input, pos);
-      return [
-        {
-          type: TokenType.QUOTED_STRING,
-          value: `${fieldPart}:${quotedToken.value}`,
-          position: position,
-          length: newPos - position,
-        },
-        newPos,
-      ];
-    }
-
-    // Handle unquoted values
-    const valuePart = readUntil(
-      input,
-      pos,
-      (char) => !isWhitespace(char) && !isSpecialChar(char)
-    );
-    pos += valuePart.length;
-
-    // Check for wildcard after the value
-    if (pos < input.length && isWildcard(input[pos])) {
-      return [
-        {
-          type: TokenType.STRING,
-          value: `${fieldPart}:${valuePart}*`,
-          position,
-          length: pos + 1 - position,
-        },
-        pos + 1,
-      ];
-    }
-
     return [
       {
         type: TokenType.STRING,
-        value: `${fieldPart}:${valuePart}`,
+        value: word,
         position,
-        length: pos - position,
+        length: word.length,
       },
       pos,
     ];
   }
 
   // Handle logical operators (case-insensitive)
-  const upperFieldPart = fieldPart.toUpperCase();
+  const upperWord = word.toUpperCase();
   if (
-    upperFieldPart === "AND" ||
-    upperFieldPart === "OR" ||
-    upperFieldPart === "NOT"
+    upperWord === "AND" ||
+    upperWord === "OR" ||
+    upperWord === "NOT"
   ) {
     return [
       {
         type:
-          upperFieldPart === "AND"
+          upperWord === "AND"
             ? TokenType.AND
-            : upperFieldPart === "OR"
+            : upperWord === "OR"
             ? TokenType.OR
             : TokenType.NOT,
-        value: upperFieldPart,
+        value: upperWord,
         position,
-        length: fieldPart.length,
+        length: word.length,
       },
       pos,
     ];
   }
 
   // Handle IN operator (case-insensitive)
-  if (upperFieldPart === "IN") {
+  if (upperWord === "IN") {
     return [
       {
         type: TokenType.IN,
         value: "IN",
         position,
-        length: fieldPart.length,
+        length: word.length,
       },
       pos,
     ];
@@ -257,7 +222,7 @@ const tokenizeString = (input: string, position: number): [Token, number] => {
     return [
       {
         type: TokenType.STRING,
-        value: fieldPart + wildcards,
+        value: word + wildcards,
         position,
         length: pos - position,
       },
@@ -269,9 +234,9 @@ const tokenizeString = (input: string, position: number): [Token, number] => {
   return [
     {
       type: TokenType.STRING,
-      value: fieldPart,
+      value: word,
       position,
-      length: fieldPart.length,
+      length: word.length,
     },
     pos,
   ];
@@ -318,6 +283,7 @@ export const tokenize = (input: string): Token[] => {
           if (
             position === prevEnd &&
             prevToken.type !== TokenType.COMMA &&
+            prevToken.type !== TokenType.COLON &&
             (prevToken.type === TokenType.QUOTED_STRING ||
               prevToken.type === TokenType.STRING)
           ) {
@@ -377,6 +343,17 @@ export const tokenize = (input: string): Token[] => {
         tokens.push({
           type: TokenType.COMMA,
           value: ",",
+          position,
+          length: 1,
+        });
+        position++;
+        break;
+      }
+
+      case ":": {
+        tokens.push({
+          type: TokenType.COLON,
+          value: ":",
           position,
           length: 1,
         });

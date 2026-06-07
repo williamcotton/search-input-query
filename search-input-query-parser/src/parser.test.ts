@@ -1125,7 +1125,7 @@ describe("Search Query Parser", () => {
           {
             message: "Expected ',' or ')' after IN value",
             code: SearchQueryErrorCode.IN_SEPARATOR_MISSING,
-            position: 5,
+            position: 7,
             length: 1,
           },
         ]);

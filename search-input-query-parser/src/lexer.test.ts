@@ -107,15 +107,21 @@ describe("Lexer", () => {
       });
     });
 
-    test("handles operators as field values", () => {
+    test("handles operators as field values (split into separate tokens)", () => {
       expect(tokenize("field:and")).toEqual([
-        { type: TokenType.STRING, value: "field:and", position: 0, length: 9 },
+        { type: TokenType.STRING, value: "field", position: 0, length: 5 },
+        { type: TokenType.COLON, value: ":", position: 5, length: 1 },
+        { type: TokenType.AND, value: "AND", position: 6, length: 3 },
       ]);
       expect(tokenize("field:or")).toEqual([
-        { type: TokenType.STRING, value: "field:or", position: 0, length: 8 },
+        { type: TokenType.STRING, value: "field", position: 0, length: 5 },
+        { type: TokenType.COLON, value: ":", position: 5, length: 1 },
+        { type: TokenType.OR, value: "OR", position: 6, length: 2 },
       ]);
       expect(tokenize('field:"AND"')).toEqual([
-        { type: TokenType.QUOTED_STRING, value: 'field:"AND"', position: 0, length: 11 },
+        { type: TokenType.STRING, value: "field", position: 0, length: 5 },
+        { type: TokenType.COLON, value: ":", position: 5, length: 1 },
+        { type: TokenType.QUOTED_STRING, value: '"AND"', position: 6, length: 5 },
       ]);
     });
 
@@ -173,65 +179,101 @@ describe("Lexer", () => {
   });
 
   describe("Field:Value Pairs", () => {
-    test("handles basic field:value pairs", () => {
+    test("handles basic field:value pairs as split tokens", () => {
       expect(tokenize("color:red")).toEqual([
-        { type: TokenType.STRING, value: "color:red", position: 0, length: 9 },
+        { type: TokenType.STRING, value: "color", position: 0, length: 5 },
+        { type: TokenType.COLON, value: ":", position: 5, length: 1 },
+        { type: TokenType.STRING, value: "red", position: 6, length: 3 },
       ]);
 
       expect(tokenize("size:42")).toEqual([
-        { type: TokenType.STRING, value: "size:42", position: 0, length: 7 },
+        { type: TokenType.STRING, value: "size", position: 0, length: 4 },
+        { type: TokenType.COLON, value: ":", position: 4, length: 1 },
+        { type: TokenType.NUMBER, value: "42", position: 5, length: 2 },
       ]);
     });
 
     test("handles field:value pairs with quoted values", () => {
       expect(tokenize('status:"in progress"')).toEqual([
+        { type: TokenType.STRING, value: "status", position: 0, length: 6 },
+        { type: TokenType.COLON, value: ":", position: 6, length: 1 },
         {
           type: TokenType.QUOTED_STRING,
-          value: 'status:"in progress"',
-          position: 0,
-          length: 20,
+          value: '"in progress"',
+          position: 7,
+          length: 13,
         },
       ]);
     });
 
     test("handles field:value pairs with various spacing", () => {
+      // Space after colon: field and value are separate tokens with gap
       expect(tokenize("field: value")).toEqual([
-        {
-          type: TokenType.STRING,
-          value: "field:",
-          position: 0,
-          length: 6,
-        },
-        {
-          type: TokenType.STRING,
-          value: "value",
-          position: 7,
-          length: 5,
-        },
+        { type: TokenType.STRING, value: "field", position: 0, length: 5 },
+        { type: TokenType.COLON, value: ":", position: 5, length: 1 },
+        { type: TokenType.STRING, value: "value", position: 7, length: 5 },
       ]);
 
+      // Space before colon: field and colon are separate tokens with gap
       expect(tokenize("field :value")).toEqual([
-        {
-          type: TokenType.STRING,
-          value: "field",
-          position: 0,
-          length: 5,
-        },
-        {
-          type: TokenType.STRING,
-          value: ":value",
-          position: 6,
-          length: 6,
-        },
+        { type: TokenType.STRING, value: "field", position: 0, length: 5 },
+        { type: TokenType.COLON, value: ":", position: 6, length: 1 },
+        { type: TokenType.STRING, value: "value", position: 7, length: 5 },
       ]);
 
+      // No spaces: all adjacent
       expect(tokenize('field:"quoted value"')).toEqual([
+        { type: TokenType.STRING, value: "field", position: 0, length: 5 },
+        { type: TokenType.COLON, value: ":", position: 5, length: 1 },
         {
           type: TokenType.QUOTED_STRING,
-          value: 'field:"quoted value"',
-          position: 0,
-          length: 20,
+          value: '"quoted value"',
+          position: 6,
+          length: 14,
         },
+      ]);
+    });
+  });
+
+  describe("COLON Token", () => {
+    test("emits standalone COLON tokens", () => {
+      expect(tokenize(":")).toEqual([
+        { type: TokenType.COLON, value: ":", position: 0, length: 1 },
+      ]);
+    });
+
+    test("emits COLON for :value", () => {
+      expect(tokenize(":value")).toEqual([
+        { type: TokenType.COLON, value: ":", position: 0, length: 1 },
+        { type: TokenType.STRING, value: "value", position: 1, length: 5 },
+      ]);
+    });
+
+    test("emits multiple COLONs for field::", () => {
+      expect(tokenize("field::")).toEqual([
+        { type: TokenType.STRING, value: "field", position: 0, length: 5 },
+        { type: TokenType.COLON, value: ":", position: 5, length: 1 },
+        { type: TokenType.COLON, value: ":", position: 6, length: 1 },
+      ]);
+    });
+
+    test("keywords before colon are emitted as STRING", () => {
+      expect(tokenize("AND:value")).toEqual([
+        { type: TokenType.STRING, value: "AND", position: 0, length: 3 },
+        { type: TokenType.COLON, value: ":", position: 3, length: 1 },
+        { type: TokenType.STRING, value: "value", position: 4, length: 5 },
+      ]);
+
+      expect(tokenize("OR:test")).toEqual([
+        { type: TokenType.STRING, value: "OR", position: 0, length: 2 },
+        { type: TokenType.COLON, value: ":", position: 2, length: 1 },
+        { type: TokenType.STRING, value: "test", position: 3, length: 4 },
+      ]);
+
+      expect(tokenize("NOT:test")).toEqual([
+        { type: TokenType.STRING, value: "NOT", position: 0, length: 3 },
+        { type: TokenType.COLON, value: ":", position: 3, length: 1 },
+        { type: TokenType.STRING, value: "test", position: 4, length: 4 },
       ]);
     });
   });
@@ -273,27 +315,23 @@ describe("Lexer", () => {
       expect(
         tokenize('category:"winter boots" AND (color:black OR color:brown)')
       ).toEqual([
+        { type: TokenType.STRING, value: "category", position: 0, length: 8 },
+        { type: TokenType.COLON, value: ":", position: 8, length: 1 },
         {
           type: TokenType.QUOTED_STRING,
-          value: 'category:"winter boots"',
-          position: 0,
-          length: 23,
+          value: '"winter boots"',
+          position: 9,
+          length: 14,
         },
         { type: TokenType.AND, value: "AND", position: 24, length: 3 },
         { type: TokenType.LPAREN, value: "(", position: 28, length: 1 },
-        {
-          type: TokenType.STRING,
-          value: "color:black",
-          position: 29,
-          length: 11,
-        },
+        { type: TokenType.STRING, value: "color", position: 29, length: 5 },
+        { type: TokenType.COLON, value: ":", position: 34, length: 1 },
+        { type: TokenType.STRING, value: "black", position: 35, length: 5 },
         { type: TokenType.OR, value: "OR", position: 41, length: 2 },
-        {
-          type: TokenType.STRING,
-          value: "color:brown",
-          position: 44,
-          length: 11,
-        },
+        { type: TokenType.STRING, value: "color", position: 44, length: 5 },
+        { type: TokenType.COLON, value: ":", position: 49, length: 1 },
+        { type: TokenType.STRING, value: "brown", position: 50, length: 5 },
         { type: TokenType.RPAREN, value: ")", position: 55, length: 1 },
       ]);
     });
@@ -356,12 +394,9 @@ describe("Lexer", () => {
     test("handles negative field:value pairs", () => {
       expect(tokenize("-status:active")).toEqual([
         { type: TokenType.NOT, value: "NOT", position: 0, length: 1 },
-        {
-          type: TokenType.STRING,
-          value: "status:active",
-          position: 1,
-          length: 13,
-        },
+        { type: TokenType.STRING, value: "status", position: 1, length: 6 },
+        { type: TokenType.COLON, value: ":", position: 7, length: 1 },
+        { type: TokenType.STRING, value: "active", position: 8, length: 6 },
       ]);
     });
 
@@ -403,9 +438,16 @@ describe("Lexer", () => {
       expect(tokenize("product-type:pre-owned")).toEqual([
         {
           type: TokenType.STRING,
-          value: "product-type:pre-owned",
+          value: "product-type",
           position: 0,
-          length: 22,
+          length: 12,
+        },
+        { type: TokenType.COLON, value: ":", position: 12, length: 1 },
+        {
+          type: TokenType.STRING,
+          value: "pre-owned",
+          position: 13,
+          length: 9,
         },
       ]);
     });
@@ -434,6 +476,10 @@ describe("Lexer", () => {
       expect(() => tokenize('"test" "test"')).not.toThrow();
       expect(() => tokenize('"test" AND "test"')).not.toThrow();
       expect(() => tokenize('"test" OR "test"')).not.toThrow();
+    });
+
+    test("accepts colon before quoted string (field:\"value\")", () => {
+      expect(() => tokenize('field:"value"')).not.toThrow();
     });
   });
 });

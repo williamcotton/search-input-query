@@ -120,7 +120,9 @@ export const parseExpression = (
       token.type === TokenType.STRING ||
       token.type === TokenType.QUOTED_STRING ||
       token.type === TokenType.LPAREN ||
-      token.type === TokenType.NOT
+      token.type === TokenType.NOT ||
+      token.type === TokenType.COLON ||
+      token.type === TokenType.NUMBER
     ) {
       const precedence = getOperatorPrecedence(TokenType.AND);
       if (precedence < minPrecedence) break;
